@@ -4,6 +4,8 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart'; // HAFIZA
 import 'package:audioplayers/audioplayers.dart'; // MÜZİK
 import 'package:fl_chart/fl_chart.dart'; // GRAFİK
+import 'dart:convert'; // Notları JSON olarak saklamak için
+import 'package:intl/intl.dart'; // Tarih formatı için
 
 // Canlı Tema Rengi
 ValueNotifier<Color> appThemeColor = ValueNotifier(Colors.deepPurple);
@@ -146,7 +148,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     Color mainColor = appThemeColor.value;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text('Bebek Takip 🐣'),
         actions: [
@@ -274,6 +276,20 @@ class _DashboardPageState extends State<DashboardPage> {
                       );
                     },
                   ),
+                  _buildMenuCard(
+                    context,
+                    Icons.note_alt,
+                    "Notlar",
+                    Colors.brown,
+                    () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const NotesPage(),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -329,10 +345,10 @@ class _LullabyPageState extends State<LullabyPage> {
   String? _playingFile;
 
   final List<Map<String, String>> _sounds = [
-    {'title': 'Beyaz Gürültü', 'file': 'fon.mp3'},
-    {'title': 'Süpürge Sesi', 'file': 'supurge.mp3'},
-    {'title': 'Sakinleştirici Yağmur', 'file': 'yagmur.mp3'},
-    {'title': 'Brahms Ninnisi', 'file': 'ninni.mp3'},
+    {'title': 'Beyaz Gürültü', 'file': 'white_noise.mp3'},
+    {'title': 'Süpürge Sesi', 'file': 'vacuum.mp3'},
+    {'title': 'Sakinleştirici Yağmur', 'file': 'rain.mp3'},
+    {'title': 'Brahms Ninnisi', 'file': 'brahms_lullaby.mp3'},
   ];
 
   @override
@@ -367,7 +383,7 @@ class _LullabyPageState extends State<LullabyPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Ninniler 🎵"),
         backgroundColor: Colors.purpleAccent.shade100,
@@ -677,7 +693,7 @@ class _GrowthPageState extends State<GrowthPage> {
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Gelişim Takibi 📈"),
         backgroundColor: Colors.teal.shade100,
@@ -960,7 +976,7 @@ class _VaccinePageState extends State<VaccinePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Sağlık Takibi 🏥"),
         backgroundColor: Colors.redAccent,
@@ -1394,7 +1410,7 @@ class _FeedingPageState extends State<FeedingPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Beslenme Takibi 🍼"),
         backgroundColor: Colors.orange,
@@ -1520,6 +1536,131 @@ class _FeedingPageState extends State<FeedingPage> {
               style: TextStyle(
                 color: isSelected ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// --- NOTLAR SAYFASI 📝 ---
+class NotesPage extends StatefulWidget {
+  const NotesPage({super.key});
+
+  @override
+  State<NotesPage> createState() => _NotesPageState();
+}
+
+class _NotesPageState extends State<NotesPage> {
+  List<Map<String, String>> notes = [];
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNotes();
+  }
+
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? jsonNotes = prefs.getString('notes');
+    if (jsonNotes != null) {
+      List decoded = jsonDecode(jsonNotes);
+      setState(() {
+        notes = decoded.map((e) => Map<String, String>.from(e)).toList();
+      });
+    }
+  }
+
+  Future<void> _saveNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('notes', jsonEncode(notes));
+  }
+
+  void _addNote() {
+    if (_controller.text.trim().isEmpty) return;
+
+    setState(() {
+      notes.insert(0, {
+        'text': _controller.text.trim(),
+        'date': getCurrentDateTime(),
+      });
+      _controller.clear();
+      _saveNotes();
+    });
+  }
+
+  void _deleteNote(int index) {
+    setState(() {
+      notes.removeAt(index);
+      _saveNotes();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBar(
+        title: const Text("Notlar 📝"),
+        backgroundColor: Colors.brown.shade300,
+        foregroundColor: Colors.white,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: _controller,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: "Bir not ekleyin...",
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              height: 45,
+              child: ElevatedButton.icon(
+                onPressed: _addNote,
+                icon: const Icon(Icons.add),
+                label: const Text("EKLE"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView.builder(
+                itemCount: notes.length,
+                itemBuilder: (context, index) {
+                  final note = notes[index];
+                  return Card(
+                    elevation: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    child: ListTile(
+                      title: Text(
+                        note['text']!,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        note['date']!,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => _deleteNote(index),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],
