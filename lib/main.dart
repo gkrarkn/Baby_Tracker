@@ -280,7 +280,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     context,
                     Icons.note_alt,
                     "Notlar",
-                    Colors.brown,
+                    const Color(0xFF6D8A8F), // SOFT PASTEL RENK
                     () {
                       Navigator.push(
                         context,
@@ -1605,7 +1605,7 @@ class _NotesPageState extends State<NotesPage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Notlar 📝"),
-        backgroundColor: Colors.brown.shade300,
+        backgroundColor: appThemeColor.value.withOpacity(0.85),
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -1628,11 +1628,22 @@ class _NotesPageState extends State<NotesPage> {
               height: 45,
               child: ElevatedButton.icon(
                 onPressed: _addNote,
-                icon: const Icon(Icons.add),
-                label: const Text("EKLE"),
+                icon: const Icon(Icons.add, size: 22),
+                label: const Text(
+                  "EKLE",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.brown,
+                  backgroundColor: appThemeColor.value.withOpacity(0.9),
                   foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
             ),
