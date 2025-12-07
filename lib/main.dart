@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart'; // HAFIZA
 import 'package:audioplayers/audioplayers.dart'; // MÜZİK
 import 'package:fl_chart/fl_chart.dart'; // GRAFİK
 import 'dart:convert'; // Notları JSON olarak saklamak için
-import 'package:intl/intl.dart'; // Tarih formatı için
+// Tarih formatı için
 
 // Canlı Tema Rengi
 ValueNotifier<Color> appThemeColor = ValueNotifier(Colors.deepPurple);
@@ -366,7 +366,7 @@ class _LullabyPageState extends State<LullabyPage> {
         });
       } else {
         await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('audio/$fileName'));
+        await _audioPlayer.play(AssetSource('assets/audio/$fileName'));
         setState(() {
           _playingFile = fileName;
         });
@@ -475,6 +475,14 @@ class _GrowthPageState extends State<GrowthPage> {
   void initState() {
     super.initState();
     _loadLogs();
+  }
+
+  @override
+  void dispose() {
+    _weightController.dispose();
+    _heightController.dispose();
+    _headController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadLogs() async {
@@ -934,6 +942,12 @@ class _VaccinePageState extends State<VaccinePage> {
     _loadLogs();
   }
 
+  @override
+  void dispose() {
+    _medicineController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -1240,8 +1254,8 @@ class SleepPage extends StatefulWidget {
 
 class _SleepPageState extends State<SleepPage> {
   bool isSleeping = false;
-  Stopwatch stopwatch = Stopwatch();
-  late Timer timer;
+  final Stopwatch stopwatch = Stopwatch();
+  Timer? timer; // nullable
   String elapsedTime = "00:00:00";
   List<String> sleepLogs = [];
 
@@ -1249,6 +1263,12 @@ class _SleepPageState extends State<SleepPage> {
   void initState() {
     super.initState();
     _loadLogs();
+  }
+
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadLogs() async {
@@ -1264,7 +1284,10 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   void _startTimer() {
-    timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    // varsa eski timer'ı iptal et
+    timer?.cancel();
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
       setState(() {
         elapsedTime = _formatTime(stopwatch.elapsedMilliseconds);
       });
@@ -1275,20 +1298,24 @@ class _SleepPageState extends State<SleepPage> {
     int seconds = (milliseconds / 1000).truncate();
     int minutes = (seconds / 60).truncate();
     int hours = (minutes / 60).truncate();
-    return "${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}";
+    return "${hours.toString().padLeft(2, '0')}:"
+        "${minutes.toString().padLeft(2, '0')}:"
+        "${seconds.toString().padLeft(2, '0')}";
   }
 
   void _toggleSleep() {
     setState(() {
       if (isSleeping) {
+        // Uyku bitişi
         stopwatch.stop();
-        timer.cancel();
+        timer?.cancel();
         String timeStamp = getCurrentDateTime();
         sleepLogs.insert(0, "😴 Uyku: $elapsedTime|$timeStamp");
         _saveLogs();
         stopwatch.reset();
         elapsedTime = "00:00:00";
       } else {
+        // Uyku başlangıcı
         stopwatch.start();
         _startTimer();
       }
@@ -1561,6 +1588,12 @@ class _NotesPageState extends State<NotesPage> {
   void initState() {
     super.initState();
     _loadNotes();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNotes() async {
