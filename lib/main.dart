@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // KLAVYE KONTROLÜ
-import 'pages/sleep_page.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // HAFIZA
 import 'package:audioplayers/audioplayers.dart'; // MÜZİK
 import 'package:fl_chart/fl_chart.dart'; // GRAFİK
 import 'dart:convert'; // Notları JSON olarak saklamak için
-// Tarih formatı için
 
-// Canlı Tema Rengi
-ValueNotifier<Color> appThemeColor = ValueNotifier(Colors.deepPurple);
+import 'core/app_globals.dart'; // appThemeColor + getCurrentDateTime
+import 'pages/sleep_page.dart';
+
+// main.dart İÇİNDE appThemeColor TANIMI YOK ARTIK
+// getCurrentDateTime FONKSİYONU DA BURADAN SİLİNDİ
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -80,14 +81,6 @@ class BabyTrackerApp extends StatelessWidget {
       },
     );
   }
-}
-
-String getCurrentDateTime() {
-  DateTime now = DateTime.now();
-  String date = "${now.day}.${now.month}.${now.year}";
-  String time =
-      "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
-  return "$date - $time";
 }
 
 // --- ANA MENÜ (DASHBOARD) ---

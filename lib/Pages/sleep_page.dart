@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../main.dart'; // appThemeColor ve getCurrentDateTime için
+import '../core/app_globals.dart'; // appThemeColor ve getCurrentDateTime için
 
 class SleepPage extends StatefulWidget {
   const SleepPage({super.key});
