@@ -137,6 +137,7 @@ Please submit a pull request or open an issue.
 
 This project is licensed under the MIT License.
 
+## 🇹🇷 Turkish README  
 The Turkish version of this documentation is available here:
 
 [🇹🇷 Turkish README](README.tr.md)

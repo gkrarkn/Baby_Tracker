@@ -367,8 +367,9 @@ class _SleepPageState extends State<SleepPage> {
   // --- Widget: Timer Kartı ve Buton ---
   Widget _buildTimerCard(Color mainColor) {
     return Container(
+      margin: const EdgeInsets.only(top: 16),
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -381,6 +382,8 @@ class _SleepPageState extends State<SleepPage> {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // İkon
           Container(
@@ -393,39 +396,41 @@ class _SleepPageState extends State<SleepPage> {
             ),
             child: _buildStateIcon(),
           ),
-          const SizedBox(height: 16),
+
+          const SizedBox(height: 20),
 
           // Durum etiketi
           Text(
             isSleeping ? "Miniğin şu anda uyuyor" : "Miniğin şu anda uyanık",
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 15,
               color: isSleeping ? mainColor : Colors.grey.shade700,
               fontWeight: FontWeight.w600,
             ),
+            textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
           // Süre
           Text(
             elapsedTime,
-            style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 38, fontWeight: FontWeight.bold),
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 28),
 
-          // Buton
+          // Buton – tam genişlik
           SizedBox(
-            width: 190,
-            height: 48,
+            width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _toggleSleep,
               style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 backgroundColor: isSleeping ? Colors.redAccent : Colors.green,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 elevation: 4,
               ),
