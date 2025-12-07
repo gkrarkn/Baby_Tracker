@@ -352,6 +352,12 @@ class _LullabyPageState extends State<LullabyPage> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _audioPlayer.setReleaseMode(ReleaseMode.stop); // varsayılanı netleştir
+  }
+
+  @override
   void dispose() {
     _audioPlayer.dispose();
     super.dispose();
@@ -360,13 +366,21 @@ class _LullabyPageState extends State<LullabyPage> {
   Future<void> _toggleSound(String fileName) async {
     try {
       if (_playingFile == fileName) {
+        // DURDUR
+        await _audioPlayer.setReleaseMode(ReleaseMode.stop);
         await _audioPlayer.stop();
         setState(() {
           _playingFile = null;
         });
       } else {
+        // ÖNCE VARSA DİĞERİNİ KAPA
         await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('assets/audio/$fileName'));
+
+        // LOOP MODU
+        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
+
+        // ASSET PATH: audio/...
+        await _audioPlayer.play(AssetSource('audio/$fileName'));
         setState(() {
           _playingFile = fileName;
         });
@@ -1676,7 +1690,6 @@ class _NotesPageState extends State<NotesPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
               ),
             ),
