@@ -34,19 +34,44 @@ Baby Tracker is a Flutter-based mobile application that helps parents monitor an
 - Auto-generated graphs (fL_chart)
 - Animated, interactive charts
 
-📸 Screenshots
-🏠 Home Screen
-<img src="assets/screenshots/home.png" width="320"/>
-💤 Sleep Tracking
-<img src="assets/screenshots/sleep.png" width="320"/>
-🥛 Feeding Tracker
-<img src="assets/screenshots/feeding.png" width="320"/>
-🎵 Lullabies
-<img src="assets/screenshots/lullabies.png" width="320"/>
-🩺 Health Tracking
-<img src="assets/screenshots/health.png" width="320"/>
-📈 Growth Tracking
-<img src="assets/screenshots/growth.png" width="320"/>
+## 📸 Screenshots
+
+### 🏠 Home Screen
+
+<div align="left">
+  <img src="assets/screenshots/home.png" width="320"/>
+</div>
+
+### 🛌 Sleep Tracking
+
+<div align="left">
+  <img src="assets/screenshots/sleep.png" width="320"/>
+</div>
+
+### 🍼 Feeding Tracker
+
+<div align="left">
+  <img src="assets/screenshots/feeding.png" width="320"/>
+</div>
+
+### 🎧 Lullabies
+
+<div align="left">
+  <img src="assets/screenshots/lullabies.png" width="320"/>
+</div>
+
+### 💉 Health Tracking
+
+<div align="left">
+  <img src="assets/screenshots/health.png" width="320"/>
+</div>
+
+### 📈 Growth Tracking
+
+<div align="left">
+  <img src="assets/screenshots/growth.png" width="320"/>
+</div>
+
 🚀 Roadmap (2026)
 Q1
 
@@ -116,4 +141,4 @@ This project is licensed under the MIT License.
 
 The Turkish version of this documentation is available here:
 
-📄 [Turkish README](./README_TR.md)
+[🇹🇷 Turkish README](README.tr.md)
