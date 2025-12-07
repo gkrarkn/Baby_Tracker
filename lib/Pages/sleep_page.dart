@@ -164,6 +164,7 @@ class _SleepPageState extends State<SleepPage> {
           ),
         ],
       ),
+
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -172,9 +173,10 @@ class _SleepPageState extends State<SleepPage> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(20.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // --- SON UYKU KARTI ---
               _buildLastSleepCard(mainColor),
@@ -197,48 +199,66 @@ class _SleepPageState extends State<SleepPage> {
               ),
               const SizedBox(height: 8),
 
-              // --- LİSTE ---
-              Expanded(
-                child: sleepLogs.isEmpty
-                    ? _buildEmptyState()
-                    : ListView.builder(
-                        itemCount: sleepLogs.length,
-                        itemBuilder: (context, index) {
-                          final parts = sleepLogs[index].split('|');
-                          final title = parts[0];
-                          final date = parts.length > 1 ? parts[1] : "";
-                          return Card(
-                            elevation: 1,
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: mainColor.withOpacity(0.15),
-                                child: Icon(
-                                  Icons.nightlight_round,
-                                  color: mainColor,
-                                ),
-                              ),
-                              title: Text(
-                                title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              subtitle: Text(
-                                date,
-                                style: const TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+              // --- LİSTE / BOŞ DURUM ---
+              if (sleepLogs.isEmpty)
+                _buildEmptyState()
+              else
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: sleepLogs.length,
+                  itemBuilder: (context, index) {
+                    final parts = sleepLogs[index].split('|');
+                    final title = parts[0];
+                    final date = parts.length > 1 ? parts[1] : "";
+
+                    return Dismissible(
+                      key: ValueKey(sleepLogs[index]),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        color: Colors.redAccent,
+                        child: const Icon(Icons.delete, color: Colors.white),
                       ),
-              ),
+                      onDismissed: (_) async {
+                        setState(() {
+                          sleepLogs.removeAt(index);
+                        });
+                        await _saveLogs();
+                      },
+                      child: Card(
+                        elevation: 1,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: mainColor.withOpacity(0.15),
+                            child: Icon(
+                              Icons.nightlight_round,
+                              color: mainColor,
+                            ),
+                          ),
+                          title: Text(
+                            title,
+                            style: const TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            date,
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+
+              const SizedBox(height: 16),
             ],
           ),
         ),
