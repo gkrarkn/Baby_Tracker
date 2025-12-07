@@ -5,14 +5,18 @@ import 'package:audioplayers/audioplayers.dart'; // MÜZİK
 import 'package:fl_chart/fl_chart.dart'; // GRAFİK
 import 'dart:convert'; // Notları JSON olarak saklamak için
 
+import 'core/notification_service.dart';
 import 'core/app_globals.dart'; // appThemeColor + getCurrentDateTime
 import 'pages/sleep_page.dart';
 
-// main.dart İÇİNDE appThemeColor TANIMI YOK ARTIK
-// getCurrentDateTime FONKSİYONU DA BURADAN SİLİNDİ
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Bildirim servisini başlat
+  await NotificationService.instance.init();
+
+  // Cinsiyete göre tema rengini yükle
+
   final prefs = await SharedPreferences.getInstance();
   String? savedGender = prefs.getString('gender');
 
@@ -379,11 +383,9 @@ class _LullabyPageState extends State<LullabyPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Ses dosyası bulunamadı!")),
-        );
-      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Ses dosyası bulunamadı!')));
     }
   }
 
