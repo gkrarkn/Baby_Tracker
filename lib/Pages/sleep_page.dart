@@ -1,11 +1,11 @@
 // lib/pages/sleep_page.dart
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 import '../core/notification_service.dart';
-import '../core/app_globals.dart'; // appThemeColor + getCurrentDateTime
+import '../core/app_globals.dart';
 
 class SleepPage extends StatefulWidget {
   const SleepPage({super.key});
@@ -59,9 +59,11 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   String _formatTime(int milliseconds) {
-    int seconds = (milliseconds / 1000).truncate();
-    int minutes = (seconds / 60).truncate();
-    int hours = (minutes / 60).truncate();
+    final totalSeconds = (milliseconds / 1000).floor();
+    final hours = totalSeconds ~/ 3600;
+    final minutes = (totalSeconds % 3600) ~/ 60;
+    final seconds = totalSeconds % 60;
+
     return "${hours.toString().padLeft(2, '0')}:"
         "${minutes.toString().padLeft(2, '0')}:"
         "${seconds.toString().padLeft(2, '0')}";

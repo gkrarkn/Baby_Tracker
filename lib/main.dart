@@ -1,27 +1,30 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // KLAVYE KONTROLÜ
-import 'package:shared_preferences/shared_preferences.dart'; // HAFIZA
-import 'package:audioplayers/audioplayers.dart'; // MÜZİK
-import 'package:fl_chart/fl_chart.dart'; // GRAFİK
-import 'dart:convert'; // Notları JSON olarak saklamak için
+import 'package:flutter/services.dart';
+
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:audioplayers/audioplayers.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 import 'core/notification_service.dart';
-import 'core/app_globals.dart'; // appThemeColor + getCurrentDateTime
+import 'core/app_globals.dart';
+import 'pages/settings_page.dart';
+import 'theme/theme_controller.dart';
 import 'pages/sleep_page.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Bildirim servisini başlat
+  await MobileAds.instance.initialize();
   await NotificationService.instance.init();
 
-  // Cinsiyete göre tema rengini yükle
-
   final prefs = await SharedPreferences.getInstance();
-  String? savedGender = prefs.getString('gender');
+  final savedGender = prefs.getString('gender');
 
   if (savedGender == 'girl') {
-    appThemeColor.value = Colors.pink.shade200; // Soft Pembe
+    appThemeColor.value = Colors.pink.shade200;
   } else if (savedGender == 'boy') {
     appThemeColor.value = Colors.blue;
   } else {
@@ -31,8 +34,28 @@ void main() async {
   runApp(const BabyTrackerApp());
 }
 
-class BabyTrackerApp extends StatelessWidget {
+class BabyTrackerApp extends StatefulWidget {
   const BabyTrackerApp({super.key});
+
+  @override
+  State<BabyTrackerApp> createState() => _BabyTrackerAppState();
+}
+
+class _BabyTrackerAppState extends State<BabyTrackerApp> {
+  late final ThemeController _themeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _themeController = ThemeController(seedColor: appThemeColor);
+    _themeController.load();
+  }
+
+  @override
+  void dispose() {
+    _themeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -73,14 +96,18 @@ class BabyTrackerApp extends StatelessWidget {
           ),
         );
 
-        return MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'Bebek Takip',
-          theme: lightTheme,
-          darkTheme: darkTheme,
-          // Cihaz ayarına göre otomatik light/dark
-          themeMode: ThemeMode.system,
-          home: const DashboardPage(),
+        return AnimatedBuilder(
+          animation: _themeController,
+          builder: (context, _) {
+            return MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'Bebek Takip',
+              theme: lightTheme,
+              darkTheme: darkTheme,
+              themeMode: _themeController.mode,
+              home: DashboardPage(themeController: _themeController),
+            );
+          },
         );
       },
     );
@@ -89,61 +116,18 @@ class BabyTrackerApp extends StatelessWidget {
 
 // --- ANA MENÜ (DASHBOARD) ---
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final ThemeController themeController;
+  const DashboardPage({super.key, required this.themeController});
+
   @override
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
 class _DashboardPageState extends State<DashboardPage> {
-  void _showGenderSettings() {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return Container(
-          padding: const EdgeInsets.all(20),
-          height: 250,
-          child: Column(
-            children: [
-              const Text(
-                "Bebeğin Cinsiyeti",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-              _buildGenderOption(
-                "Kız Bebek",
-                Icons.female,
-                Colors.pink.shade200,
-                'girl',
-              ),
-              _buildGenderOption("Erkek Bebek", Icons.male, Colors.blue, 'boy'),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGenderOption(
-    String title,
-    IconData icon,
-    Color color,
-    String key,
-  ) {
-    return ListTile(
-      leading: Icon(icon, color: color, size: 30),
-      title: Text(title, style: const TextStyle(fontSize: 18)),
-      onTap: () async {
-        appThemeColor.value = color;
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('gender', key);
-        if (mounted) Navigator.pop(context);
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    Color mainColor = appThemeColor.value;
+    final Color mainColor = appThemeColor.value;
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
@@ -151,7 +135,15 @@ class _DashboardPageState extends State<DashboardPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: _showGenderSettings,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) =>
+                      SettingsPage(themeController: widget.themeController),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -277,7 +269,7 @@ class _DashboardPageState extends State<DashboardPage> {
                     context,
                     Icons.note_alt,
                     "Notlar",
-                    const Color(0xFF6D8A8F), // SOFT PASTEL RENK
+                    const Color(0xFF6D8A8F),
                     () {
                       Navigator.push(
                         context,
@@ -351,7 +343,7 @@ class _LullabyPageState extends State<LullabyPage> {
   @override
   void initState() {
     super.initState();
-    _audioPlayer.setReleaseMode(ReleaseMode.stop); // varsayılanı netleştir
+    _audioPlayer.setReleaseMode(ReleaseMode.stop);
   }
 
   @override
@@ -363,26 +355,16 @@ class _LullabyPageState extends State<LullabyPage> {
   Future<void> _toggleSound(String fileName) async {
     try {
       if (_playingFile == fileName) {
-        // DURDUR
         await _audioPlayer.setReleaseMode(ReleaseMode.stop);
         await _audioPlayer.stop();
-        setState(() {
-          _playingFile = null;
-        });
+        setState(() => _playingFile = null);
       } else {
-        // ÖNCE VARSA DİĞERİNİ KAPA
         await _audioPlayer.stop();
-
-        // LOOP MODU
         await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-
-        // ASSET PATH: audio/...
         await _audioPlayer.play(AssetSource('audio/$fileName'));
-        setState(() {
-          _playingFile = fileName;
-        });
+        setState(() => _playingFile = fileName);
       }
-    } catch (e) {
+    } catch (_) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Ses dosyası bulunamadı!')));
@@ -455,11 +437,10 @@ class _LullabyPageState extends State<LullabyPage> {
 }
 
 // --- GELİŞİM SAYFASI 📈 ---
-
 class _GrowthSample {
   final double weight;
   final double height;
-  final String label; // örn: 29.11.2025
+  final String label;
 
   _GrowthSample({
     required this.weight,
@@ -507,19 +488,16 @@ class _GrowthPageState extends State<GrowthPage> {
   }
 
   void _saveEntry() {
-    if (_weightController.text.isEmpty || _heightController.text.isEmpty) {
+    if (_weightController.text.isEmpty || _heightController.text.isEmpty)
       return;
-    }
 
-    String weight = _weightController.text.replaceAll(',', '.');
-    String height = _heightController.text.replaceAll(',', '.');
-    String head = _headController.text.replaceAll(',', '.');
-    String timeStamp = getCurrentDateTime();
+    final weight = _weightController.text.replaceAll(',', '.');
+    final height = _heightController.text.replaceAll(',', '.');
+    final head = _headController.text.replaceAll(',', '.');
+    final timeStamp = getCurrentDateTime();
 
-    String entryText = "⚖️ $weight kg  -  📏 $height cm";
-    if (head.isNotEmpty) {
-      entryText += "\n🧢 Baş Çevresi: $head cm";
-    }
+    var entryText = "⚖️ $weight kg  -  📏 $height cm";
+    if (head.isNotEmpty) entryText += "\n🧢 Baş Çevresi: $head cm";
     entryText += "|$timeStamp";
 
     setState(() {
@@ -535,19 +513,14 @@ class _GrowthPageState extends State<GrowthPage> {
   Future<void> _clearLogs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('growthLogs');
-    setState(() {
-      growthLogs.clear();
-    });
+    setState(() => growthLogs.clear());
   }
 
-  // LOG’lardaki kg / cm değerlerini grafik için parse eden yapı
   List<_GrowthSample> _parseGrowthSamples() {
     final regexWeight = RegExp(r'⚖️\s*([\d.,]+)\s*kg');
     final regexHeight = RegExp(r'📏\s*([\d.,]+)\s*cm');
-
     final List<_GrowthSample> samples = [];
 
-    // En eski kaydı solda görmek için tersten okuyup listeye ekliyoruz
     for (int i = growthLogs.length - 1; i >= 0; i--) {
       final log = growthLogs[i];
       final parts = log.split('|');
@@ -562,11 +535,9 @@ class _GrowthPageState extends State<GrowthPage> {
       final h = double.tryParse(matchH.group(1)!.replaceAll(',', '.'));
       if (w == null || h == null) continue;
 
-      // Etiket olarak kısaltılmış tarih (30.11.25) kullan
+      final datePart = rawDate.split(' - ').first;
+      final pieces = datePart.split('.');
       String label;
-      final datePart = rawDate.split(' - ').first; // "30.11.2025" gibi
-      final pieces = datePart.split('.'); // ["30","11","2025"]
-
       if (pieces.length == 3) {
         final day = pieces[0];
         final month = pieces[1];
@@ -574,13 +545,13 @@ class _GrowthPageState extends State<GrowthPage> {
         final shortYear = year.length >= 2
             ? year.substring(year.length - 2)
             : year;
-        label = "$day.$month.$shortYear"; // 30.11.25
+        label = "$day.$month.$shortYear";
       } else {
-        label = datePart; // parse edemezse olduğu gibi bırak
+        label = datePart;
       }
+
       samples.add(_GrowthSample(weight: w, height: h, label: label));
     }
-
     return samples;
   }
 
@@ -634,12 +605,10 @@ class _GrowthPageState extends State<GrowthPage> {
                     sideTitles: SideTitles(
                       showTitles: true,
                       reservedSize: 32,
-                      getTitlesWidget: (value, meta) {
-                        return Text(
-                          value.toStringAsFixed(1),
-                          style: const TextStyle(fontSize: 10),
-                        );
-                      },
+                      getTitlesWidget: (value, meta) => Text(
+                        value.toStringAsFixed(1),
+                        style: const TextStyle(fontSize: 10),
+                      ),
                     ),
                   ),
                   bottomTitles: AxisTitles(
@@ -651,15 +620,11 @@ class _GrowthPageState extends State<GrowthPage> {
                         if (index < 0 || index >= labels.length) {
                           return const SizedBox.shrink();
                         }
-
                         int step = 1;
                         if (labels.length > 8) step = 2;
                         if (labels.length > 12) step = 3;
                         if (labels.length > 20) step = 4;
-
-                        if (index % step != 0) {
-                          return const SizedBox.shrink();
-                        }
+                        if (index % step != 0) return const SizedBox.shrink();
 
                         return Padding(
                           padding: const EdgeInsets.only(top: 8),
@@ -672,14 +637,13 @@ class _GrowthPageState extends State<GrowthPage> {
                     ),
                   ),
                 ),
-
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
                     isCurved: true,
                     color: color,
                     barWidth: 3,
-                    dotData: FlDotData(show: true),
+                    dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
                       color: color.withOpacity(0.12),
@@ -696,7 +660,6 @@ class _GrowthPageState extends State<GrowthPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Grafik için data hazırlığı
     final samples = _parseGrowthSamples();
     final List<FlSpot> weightSpots = [];
     final List<FlSpot> heightSpots = [];
@@ -728,7 +691,6 @@ class _GrowthPageState extends State<GrowthPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Giriş alanları
               Row(
                 children: [
                   Expanded(
@@ -810,8 +772,6 @@ class _GrowthPageState extends State<GrowthPage> {
                   ),
                 ),
               ),
-
-              // GRAFİKLER
               if (weightSpots.isNotEmpty) ...[
                 const SizedBox(height: 20),
                 _buildChartCard(
@@ -829,7 +789,6 @@ class _GrowthPageState extends State<GrowthPage> {
                   color: Colors.orange,
                 ),
               ],
-
               const SizedBox(height: 30),
               const Align(
                 alignment: Alignment.centerLeft,
@@ -841,14 +800,12 @@ class _GrowthPageState extends State<GrowthPage> {
                   ),
                 ),
               ),
-
-              // Liste – tek scroll
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: growthLogs.length,
                 itemBuilder: (context, index) {
-                  List<String> parts = growthLogs[index].split('|');
+                  final parts = growthLogs[index].split('|');
                   return Card(
                     color: Colors.teal.shade50,
                     margin: const EdgeInsets.symmetric(vertical: 5),
@@ -894,7 +851,6 @@ class _VaccinePageState extends State<VaccinePage> {
   final TextEditingController _medicineController = TextEditingController();
   List<String> vaccineLogs = [];
 
-  // Zorunlu aşılar
   final List<String> _mandatoryVaccines = [
     'Hepatit A',
     'Hepatit B',
@@ -905,7 +861,6 @@ class _VaccinePageState extends State<VaccinePage> {
     'Su Çiçeği',
   ];
 
-  // Opsiyonel / özel aşılar
   final List<String> _optionalVaccines = [
     'Rota (Rotavirüs)',
     'Menenjit B',
@@ -915,7 +870,6 @@ class _VaccinePageState extends State<VaccinePage> {
     'HPV',
   ];
 
-  // Genel bilgi notları
   final Map<String, String> _vaccineInfo = {
     'Hepatit A':
         'Rutin çocukluk aşı programında yer alan bir aşıdır. Kesin zamanlama için çocuk doktorunuza göre planlayınız.',
@@ -959,9 +913,7 @@ class _VaccinePageState extends State<VaccinePage> {
 
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      vaccineLogs = prefs.getStringList('vaccineLogs') ?? [];
-    });
+    setState(() => vaccineLogs = prefs.getStringList('vaccineLogs') ?? []);
   }
 
   Future<void> _saveLogs() async {
@@ -971,7 +923,7 @@ class _VaccinePageState extends State<VaccinePage> {
 
   void _saveEntry() {
     String entry = "";
-    String timeStamp = getCurrentDateTime();
+    final timeStamp = getCurrentDateTime();
 
     if (_selectedType == "Aşı") {
       if (_selectedVaccine == null) return;
@@ -991,9 +943,7 @@ class _VaccinePageState extends State<VaccinePage> {
   Future<void> _clearLogs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('vaccineLogs');
-    setState(() {
-      vaccineLogs.clear();
-    });
+    setState(() => vaccineLogs.clear());
   }
 
   @override
@@ -1014,7 +964,6 @@ class _VaccinePageState extends State<VaccinePage> {
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
-            // Aşı / İlaç seçim butonları
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -1024,8 +973,6 @@ class _VaccinePageState extends State<VaccinePage> {
               ],
             ),
             const SizedBox(height: 30),
-
-            // Aşı seçimi veya ilaç girişi
             if (_selectedType == "Aşı")
               Column(
                 children: [_buildVaccineDropdown(), _buildVaccineInfoCard()],
@@ -1041,10 +988,7 @@ class _VaccinePageState extends State<VaccinePage> {
                   prefixIcon: const Icon(Icons.edit, color: Colors.redAccent),
                 ),
               ),
-
             const SizedBox(height: 20),
-
-            // Kaydet butonu
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -1060,9 +1004,7 @@ class _VaccinePageState extends State<VaccinePage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 30),
-
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -1073,8 +1015,6 @@ class _VaccinePageState extends State<VaccinePage> {
                 ),
               ),
             ),
-
-            // Geçmiş liste
             Expanded(
               child: ListView.builder(
                 itemCount: vaccineLogs.length,
@@ -1116,7 +1056,6 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  // Zorunlu / Opsiyonel başlıkları olan dropdown
   Widget _buildVaccineDropdown() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 15),
@@ -1158,31 +1097,23 @@ class _VaccinePageState extends State<VaccinePage> {
             ),
           ],
           onChanged: (value) {
-            // Başlık satırına tıklanırsa seçim yapma
             if (value == null ||
                 value == 'HEADER_MANDATORY' ||
-                value == 'HEADER_OPTIONAL') {
+                value == 'HEADER_OPTIONAL')
               return;
-            }
-            setState(() {
-              _selectedVaccine = value;
-            });
+            setState(() => _selectedVaccine = value);
           },
         ),
       ),
     );
   }
 
-  // Seçilen aşı için bilgi kartı
   Widget _buildVaccineInfoCard() {
     if (_selectedVaccine == null) return const SizedBox.shrink();
 
-    final bool isMandatory = _mandatoryVaccines.contains(_selectedVaccine);
-    final String groupLabel = isMandatory
-        ? 'Zorunlu Aşı'
-        : 'Opsiyonel / Özel Aşı';
-
-    final String info =
+    final isMandatory = _mandatoryVaccines.contains(_selectedVaccine);
+    final groupLabel = isMandatory ? 'Zorunlu Aşı' : 'Opsiyonel / Özel Aşı';
+    final info =
         _vaccineInfo[_selectedVaccine] ??
         'Bu aşı hakkında detaylı takvim ve uygulama bilgisi için çocuk doktorunuza danışın.';
 
@@ -1222,7 +1153,7 @@ class _VaccinePageState extends State<VaccinePage> {
   }
 
   Widget _buildTypeButton(String type, IconData icon) {
-    final bool isSelected = _selectedType == type;
+    final isSelected = _selectedType == type;
     return GestureDetector(
       onTap: () {
         setState(() {
@@ -1274,9 +1205,7 @@ class _FeedingPageState extends State<FeedingPage> {
 
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      feedingLogs = prefs.getStringList('feedingLogs') ?? [];
-    });
+    setState(() => feedingLogs = prefs.getStringList('feedingLogs') ?? []);
   }
 
   Future<void> _saveLogs() async {
@@ -1286,8 +1215,8 @@ class _FeedingPageState extends State<FeedingPage> {
 
   void _saveFeeding() {
     setState(() {
-      String amount = "${_currentSliderValue.round()} ml";
-      String timeStamp = getCurrentDateTime();
+      final amount = "${_currentSliderValue.round()} ml";
+      final timeStamp = getCurrentDateTime();
       feedingLogs.insert(0, "🍼 $_selectedType - $amount|$timeStamp");
       _saveLogs();
     });
@@ -1296,9 +1225,7 @@ class _FeedingPageState extends State<FeedingPage> {
   Future<void> _clearLogs() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('feedingLogs');
-    setState(() {
-      feedingLogs.clear();
-    });
+    setState(() => feedingLogs.clear());
   }
 
   @override
@@ -1345,9 +1272,7 @@ class _FeedingPageState extends State<FeedingPage> {
               activeColor: Colors.orange,
               label: _currentSliderValue.round().toString(),
               onChanged: (double value) {
-                setState(() {
-                  _currentSliderValue = value;
-                });
+                setState(() => _currentSliderValue = value);
               },
             ),
             const SizedBox(height: 20),
@@ -1381,7 +1306,7 @@ class _FeedingPageState extends State<FeedingPage> {
               child: ListView.builder(
                 itemCount: feedingLogs.length,
                 itemBuilder: (context, index) {
-                  List<String> parts = feedingLogs[index].split('|');
+                  final parts = feedingLogs[index].split('|');
                   return Card(
                     color: Colors.orange.shade50,
                     margin: const EdgeInsets.symmetric(vertical: 5),
@@ -1408,13 +1333,9 @@ class _FeedingPageState extends State<FeedingPage> {
   }
 
   Widget _buildTypeButton(String type, IconData icon) {
-    bool isSelected = _selectedType == type;
+    final isSelected = _selectedType == type;
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedType = type;
-        });
-      },
+      onTap: () => setState(() => _selectedType = type),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
@@ -1465,9 +1386,9 @@ class _NotesPageState extends State<NotesPage> {
 
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
-    String? jsonNotes = prefs.getString('notes');
+    final jsonNotes = prefs.getString('notes');
     if (jsonNotes != null) {
-      List decoded = jsonDecode(jsonNotes);
+      final List decoded = jsonDecode(jsonNotes);
       setState(() {
         notes = decoded.map((e) => Map<String, String>.from(e)).toList();
       });
@@ -1579,5 +1500,3 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 }
-
-// KOD SONU
