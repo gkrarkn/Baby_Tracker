@@ -1,13 +1,10 @@
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:fl_chart/fl_chart.dart';
-
 import 'core/notification_service.dart';
 import 'core/app_globals.dart';
 import 'pages/settings_page.dart';
@@ -124,9 +121,39 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  BannerAd? _bannerAd;
+  bool _isBannerReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bannerAd = BannerAd(
+      size: AdSize.banner,
+      adUnitId: 'ca-app-pub-3940256099942544/2934735716', // iOS TEST
+      request: const AdRequest(),
+      listener: BannerAdListener(
+        onAdLoaded: (_) => setState(() => _isBannerReady = true),
+        onAdFailedToLoad: (ad, error) {
+          ad.dispose();
+          debugPrint('Banner error: $error');
+        },
+      ),
+    )..load();
+  }
+
+  @override
+  void dispose() {
+    _bannerAd?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final Color mainColor = appThemeColor.value;
+
+    final bannerHeight = (_isBannerReady && _bannerAd != null)
+        ? _bannerAd!.size.height.toDouble()
+        : 0.0;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -147,143 +174,164 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: mainColor.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
+
+      // ✅ Grid yukarıda Expanded, banner altta ayrı alan
+      body: Column(
+        children: [
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Column(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: mainColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: mainColor.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
                     ),
-                    child: Icon(Icons.child_care, size: 40, color: mainColor),
-                  ),
-                  const SizedBox(width: 15),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Hoşgeldin!",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: mainColor.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.child_care,
+                            size: 40,
+                            color: mainColor,
+                          ),
                         ),
-                      ),
-                      Text(
-                        "Miniğin bugün nasıl?",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ],
+                        const SizedBox(width: 15),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "Hoşgeldin!",
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              "Miniğin bugün nasıl?",
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  Expanded(
+                    child: GridView.count(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 15,
+                      mainAxisSpacing: 15,
+                      children: [
+                        _buildMenuCard(
+                          context,
+                          Icons.bedtime,
+                          "Uyku",
+                          mainColor,
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SleepPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        _buildMenuCard(
+                          context,
+                          Icons.restaurant,
+                          "Beslenme",
+                          Colors.orange,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FeedingPage(),
+                            ),
+                          ),
+                        ),
+                        _buildMenuCard(
+                          context,
+                          Icons.medical_services,
+                          "Aşı & İlaç",
+                          Colors.red,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const VaccinePage(),
+                            ),
+                          ),
+                        ),
+                        _buildMenuCard(
+                          context,
+                          Icons.show_chart,
+                          "Gelişim",
+                          Colors.teal,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const GrowthPage(),
+                            ),
+                          ),
+                        ),
+                        _buildMenuCard(
+                          context,
+                          Icons.music_note,
+                          "Ninniler",
+                          Colors.purpleAccent,
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LullabyPage(),
+                            ),
+                          ),
+                        ),
+
+                        _buildMenuCard(
+                          context,
+                          Icons.note_alt,
+                          "Notlar",
+                          const Color(0xFF6D8A8F),
+                          () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const NotesPage(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 30),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 15,
-                mainAxisSpacing: 15,
-                children: [
-                  _buildMenuCard(context, Icons.bedtime, "Uyku", mainColor, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SleepPage(),
-                      ),
-                    );
-                  }),
-                  _buildMenuCard(
-                    context,
-                    Icons.restaurant,
-                    "Beslenme",
-                    Colors.orange,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FeedingPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    Icons.medical_services,
-                    "Aşı & İlaç",
-                    Colors.red,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const VaccinePage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    Icons.show_chart,
-                    "Gelişim",
-                    Colors.teal,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const GrowthPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    Icons.music_note,
-                    "Ninniler",
-                    Colors.purpleAccent,
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const LullabyPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildMenuCard(
-                    context,
-                    Icons.note_alt,
-                    "Notlar",
-                    const Color(0xFF6D8A8F),
-                    () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const NotesPage(),
-                        ),
-                      );
-                    },
-                  ),
-                ],
+          ),
+
+          // ✅ Banner her zaman en altta, grid'i "kesmez"
+          if (bannerHeight > 0)
+            SafeArea(
+              top: false,
+              child: SizedBox(
+                height: bannerHeight,
+                width: double.infinity,
+                child: AdWidget(ad: _bannerAd!),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -303,7 +351,7 @@ class _DashboardPageState extends State<DashboardPage> {
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
+              color: Colors.grey.withValues(alpha: 0.1),
               spreadRadius: 2,
               blurRadius: 5,
             ),
@@ -365,6 +413,7 @@ class _LullabyPageState extends State<LullabyPage> {
         setState(() => _playingFile = fileName);
       }
     } catch (_) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Ses dosyası bulunamadı!')));
@@ -573,12 +622,12 @@ class _GrowthPageState extends State<GrowthPage> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.08),
+            color: Colors.grey.withValues(alpha: 0.08),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),
         ],
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -587,6 +636,8 @@ class _GrowthPageState extends State<GrowthPage> {
             "$title ($unit)",
             style: TextStyle(fontWeight: FontWeight.bold, color: color),
           ),
+          const SizedBox(height: 8),
+          Divider(height: 1, thickness: 1, color: Color(0x33000000)),
           const SizedBox(height: 8),
           SizedBox(
             height: 180,
@@ -646,7 +697,7 @@ class _GrowthPageState extends State<GrowthPage> {
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: color.withOpacity(0.12),
+                      color: color.withValues(alpha: 0.12),
                     ),
                   ),
                 ],
@@ -1124,7 +1175,7 @@ class _VaccinePageState extends State<VaccinePage> {
       decoration: BoxDecoration(
         color: Colors.red.shade50,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.4)),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1203,6 +1254,69 @@ class _FeedingPageState extends State<FeedingPage> {
     _loadLogs();
   }
 
+  // ✅ BURADA
+  String getCurrentDate() {
+    final now = DateTime.now();
+    return "${now.day}.${now.month}.${now.year}";
+  }
+
+  int getTodayTotalMl() {
+    final today = getCurrentDate();
+    int total = 0;
+
+    for (final log in feedingLogs) {
+      final parts = log.split('|');
+      if (parts.length < 2) continue;
+
+      if (parts[1].startsWith(today)) {
+        final match = RegExp(r'(\d+)\s?ml').firstMatch(parts[0]);
+        if (match != null) {
+          total += int.parse(match.group(1)!);
+        }
+      }
+    }
+    return total;
+  }
+
+  int getTodayCount() {
+    final today = getCurrentDate();
+    return feedingLogs.where((log) {
+      final parts = log.split('|');
+      return parts.length > 1 && parts[1].startsWith(today);
+    }).length;
+  }
+
+  DateTime? _parseLogDateTime(String raw) {
+    // raw: "7.12.2025 - 03:32"
+    try {
+      final parts = raw.split(' - ');
+      if (parts.length != 2) return null;
+
+      final d = parts[0].split('.');
+      final t = parts[1].split(':');
+      if (d.length != 3 || t.length != 2) return null;
+
+      final day = int.parse(d[0]);
+      final month = int.parse(d[1]);
+      final year = int.parse(d[2]);
+      final hour = int.parse(t[0]);
+      final minute = int.parse(t[1]);
+
+      return DateTime(year, month, day, hour, minute);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+
+    if (diff.inMinutes < 1) return "Şimdi";
+    if (diff.inMinutes < 60) return "${diff.inMinutes} dk önce";
+    if (diff.inHours < 24) return "${diff.inHours} saat önce";
+    return "${diff.inDays} gün önce";
+  }
+
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() => feedingLogs = prefs.getStringList('feedingLogs') ?? []);
@@ -1217,7 +1331,8 @@ class _FeedingPageState extends State<FeedingPage> {
     setState(() {
       final amount = "${_currentSliderValue.round()} ml";
       final timeStamp = getCurrentDateTime();
-      feedingLogs.insert(0, "🍼 $_selectedType - $amount|$timeStamp");
+      final icon = _selectedType == "Anne Sütü" ? "❤️" : "🍼";
+      feedingLogs.insert(0, "$icon $_selectedType - $amount|$timeStamp");
       _saveLogs();
     });
   }
@@ -1254,7 +1369,9 @@ class _FeedingPageState extends State<FeedingPage> {
                 _buildTypeButton("Anne Sütü", Icons.favorite),
               ],
             ),
+
             const SizedBox(height: 40),
+
             Text(
               "${_currentSliderValue.round()} ml",
               style: const TextStyle(
@@ -1263,7 +1380,9 @@ class _FeedingPageState extends State<FeedingPage> {
                 color: Colors.orange,
               ),
             ),
+
             const Text("Miktar Seçiniz", style: TextStyle(color: Colors.grey)),
+
             Slider(
               value: _currentSliderValue,
               min: 0,
@@ -1275,7 +1394,9 @@ class _FeedingPageState extends State<FeedingPage> {
                 setState(() => _currentSliderValue = value);
               },
             ),
+
             const SizedBox(height: 20),
+
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -1291,7 +1412,9 @@ class _FeedingPageState extends State<FeedingPage> {
                 ),
               ),
             ),
+
             const SizedBox(height: 30),
+
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -1302,6 +1425,40 @@ class _FeedingPageState extends State<FeedingPage> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 8),
+
+            // ✅ Mini özet
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Text("🍼", style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Bugün toplam: ${getTodayTotalMl()} ml",
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    "❤️ ${getTodayCount()} beslenme",
+                    style: TextStyle(color: Colors.grey.withValues(alpha: 0.9)),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
             Expanded(
               child: ListView.builder(
                 itemCount: feedingLogs.length,
@@ -1315,12 +1472,18 @@ class _FeedingPageState extends State<FeedingPage> {
                         Icons.restaurant_menu,
                         color: Colors.orange,
                       ),
-                      title: Text(
-                        parts[0],
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      title: Text(parts[0]),
+                      subtitle: Builder(
+                        builder: (_) {
+                          final raw = parts.length > 1 ? parts[1] : "";
+                          final dt = _parseLogDateTime(raw);
+                          if (dt == null) return Text(raw);
+
+                          return Text(
+                            "${_timeAgo(dt)}  •  ${raw.split(' - ').last}",
+                          );
+                        },
                       ),
-                      subtitle: Text(parts.length > 1 ? parts[1] : ""),
-                      trailing: const Icon(Icons.check, color: Colors.green),
                     ),
                   );
                 },
@@ -1357,8 +1520,8 @@ class _FeedingPageState extends State<FeedingPage> {
         ),
       ),
     );
-  }
-}
+  } // _buildTypeButton bitti
+} // ✅ _FeedingPageState bitti (BU EKSİKTİ)
 
 // --- NOTLAR SAYFASI 📝 ---
 class NotesPage extends StatefulWidget {
@@ -1426,7 +1589,7 @@ class _NotesPageState extends State<NotesPage> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const Text("Notlar 📝"),
-        backgroundColor: appThemeColor.value.withOpacity(0.85),
+        backgroundColor: appThemeColor.value.withValues(alpha: 0.85),
         foregroundColor: Colors.white,
       ),
       body: Padding(
@@ -1459,7 +1622,7 @@ class _NotesPageState extends State<NotesPage> {
                   ),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: appThemeColor.value.withOpacity(0.9),
+                  backgroundColor: appThemeColor.value.withValues(alpha: 0.9),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
@@ -1469,26 +1632,54 @@ class _NotesPageState extends State<NotesPage> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: ListView.builder(
+              child: GridView.builder(
                 itemCount: notes.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 1.25,
+                ),
                 itemBuilder: (context, index) {
                   final note = notes[index];
-                  return Card(
-                    elevation: 2,
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    child: ListTile(
-                      title: Text(
-                        note['text']!,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
+
+                  return Dismissible(
+                    key: ValueKey('${note['date']}_$index'),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.85),
+                        borderRadius: BorderRadius.circular(14),
                       ),
-                      subtitle: Text(
-                        note['date']!,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteNote(index),
-                      ),
+                      child: const Icon(Icons.delete, color: Colors.white),
+                    ),
+                    onDismissed: (direction) {
+                      final removed = notes[index];
+                      final removedIndex = index;
+
+                      _deleteNote(index);
+
+                      ScaffoldMessenger.of(context).clearSnackBars();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text("Not silindi"),
+                          action: SnackBarAction(
+                            label: "Geri al",
+                            onPressed: () {
+                              setState(() {
+                                notes.insert(removedIndex, removed);
+                              });
+                              _saveNotes();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                    child: _NoteCard(
+                      text: note['text'] ?? '',
+                      date: note['date'] ?? '',
                     ),
                   );
                 },
@@ -1496,6 +1687,60 @@ class _NotesPageState extends State<NotesPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NoteCard extends StatelessWidget {
+  final String text;
+  final String date;
+
+  const _NoteCard({required this.text, required this.date});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.18)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              date,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.blueGrey.withValues(alpha: 0.95),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: Text(
+              text,
+              overflow: TextOverflow.fade,
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
     );
   }
