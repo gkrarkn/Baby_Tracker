@@ -137,6 +137,17 @@ Desktop	Planlanmıyor
 Katkılar memnuniyetle kabul edilir.
 Önemli bir değişiklik planlıyorsanız, önce bir “issue” açmanız önerilir.
 
+## 📄 Gizlilik Politikası
+
+Bebek Takip uygulaması kullanıcı gizliliğini öncelik olarak kabul eder.
+
+- Uygulama kişisel veri toplamaz
+- Tüm kayıtlar yalnızca cihaz üzerinde saklanır
+- Üçüncü taraflarla veri paylaşımı yapılmaz
+- Reklam gösterimleri anonimdir ve kullanıcıyı tanımlamaz
+
+👉 [Gizlilik Politikasını Oku (TR)](privacy/privacy-policy-tr.md)
+
 📄 Lisans
 
 MIT License © 2026 Göker Arkun
