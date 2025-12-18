@@ -8,7 +8,7 @@ class PrivacyPolicyWebViewPage extends StatefulWidget {
   const PrivacyPolicyWebViewPage({
     super.key,
     required this.url,
-    this.title = 'Gizlilik Politikası',
+    required this.title,
   });
 
   @override
@@ -18,7 +18,6 @@ class PrivacyPolicyWebViewPage extends StatefulWidget {
 
 class _PrivacyPolicyWebViewPageState extends State<PrivacyPolicyWebViewPage> {
   late final WebViewController _controller;
-  bool _loading = true;
 
   @override
   void initState() {
@@ -26,12 +25,6 @@ class _PrivacyPolicyWebViewPageState extends State<PrivacyPolicyWebViewPage> {
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (_) => setState(() => _loading = true),
-          onPageFinished: (_) => setState(() => _loading = false),
-        ),
-      )
       ..loadRequest(Uri.parse(widget.url));
   }
 
@@ -39,12 +32,7 @@ class _PrivacyPolicyWebViewPageState extends State<PrivacyPolicyWebViewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
-      body: Stack(
-        children: [
-          WebViewWidget(controller: _controller),
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
-        ],
-      ),
+      body: WebViewWidget(controller: _controller),
     );
   }
 }

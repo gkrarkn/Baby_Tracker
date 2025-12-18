@@ -135,25 +135,25 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ---- Actions ----
+  // ---------------- Actions ----------------
 
   void _openPrivacyPolicy(BuildContext context) {
-    final langCode = Localizations.localeOf(context).languageCode.toLowerCase();
+    final lang = Localizations.localeOf(context).languageCode.toLowerCase();
 
-    // İstersen branch yerine main kullan: .../blob/main/privacy/...
+    // GitHub Pages (çalışan link)
     const trUrl =
-        'https://github.com/gkrarkrn/Baby_Tracker/blob/feature/next-feature/privacy/privacy-policy-tr.md';
+        'https://gkrarkn.github.io/Baby_Tracker/privacy-policy-tr.html';
     const enUrl =
-        'https://github.com/gkrarkrn/Baby_Tracker/blob/feature/next-feature/privacy/privacy-policy-en.md';
+        'https://gkrarkn.github.io/Baby_Tracker/privacy-policy-en.html';
 
-    final url = (langCode == 'tr') ? trUrl : enUrl;
+    final url = (lang == 'tr') ? trUrl : enUrl;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => PrivacyPolicyWebViewPage(
           url: url,
-          title: (langCode == 'tr') ? 'Gizlilik Politikası' : 'Privacy Policy',
+          title: (lang == 'tr') ? 'Gizlilik Politikası' : 'Privacy Policy',
         ),
       ),
     );
@@ -182,7 +182,7 @@ class SettingsPage extends StatelessWidget {
     );
   }
 
-  // ---- UI helpers ----
+  // ---------------- UI helpers ----------------
 
   static Widget _disclaimerSubtitle(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
