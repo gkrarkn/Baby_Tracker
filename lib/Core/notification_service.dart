@@ -1,5 +1,5 @@
 // lib/core/notification_service.dart
-import 'package:flutter/material.dart'; // TimeOfDay için GEREKLİ
+import 'package:flutter/material.dart'; // TimeOfDay
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -10,6 +10,13 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+
+  // Kanal ID'leri
+  static const String _sleepChannelId = 'sleep_channel';
+  static const String _notesChannelId = 'notes_channel';
+
+  // Sleep reminder sabit id (tek hatırlatma)
+  static const int _sleepNotifId = 0;
 
   Future<void> init() async {
     // Timezone setup
@@ -26,13 +33,14 @@ class NotificationService {
 
     await _plugin.initialize(initSettings);
 
-    // İzinler
+    // Android 13+ notification izinleri
     await _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >()
         ?.requestNotificationsPermission();
 
+    // iOS izinleri
     await _plugin
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
@@ -40,12 +48,60 @@ class NotificationService {
         ?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
-  /// Her gün aynı saatte “uyku kaydı” hatırlatması
+  // ---------------------------
+  // NOTES: Tek seferlik hatırlatma
+  // ---------------------------
+  Future<void> scheduleNoteReminder({
+    required String noteId,
+    required String title,
+    required String body,
+    required DateTime when,
+  }) async {
+    final int id = _noteIdToInt(noteId);
+
+    // Geçmişe/çok yakına schedule etme (iOS/Android'de saçma davranabiliyor)
+    final now = DateTime.now();
+    if (!when.isAfter(now.add(const Duration(seconds: 5)))) {
+      await _plugin.cancel(id);
+      return;
+    }
+
+    const androidDetails = AndroidNotificationDetails(
+      _notesChannelId,
+      'Not Hatırlatmaları',
+      channelDescription: 'Notlar için tek seferlik hatırlatmalar',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+
+    const iosDetails = DarwinNotificationDetails();
+
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(when, tz.local),
+      const NotificationDetails(android: androidDetails, iOS: iosDetails),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      // Tek seferlik -> matchDateTimeComponents YOK
+    );
+  }
+
+  Future<void> cancelNoteReminder(String noteId) async {
+    final int id = _noteIdToInt(noteId);
+    await _plugin.cancel(id);
+  }
+
+  // ---------------------------
+  // SLEEP: Günlük hatırlatma
+  // ---------------------------
   Future<void> scheduleDailySleepReminder(TimeOfDay time) async {
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(time);
 
     const androidDetails = AndroidNotificationDetails(
-      'sleep_channel',
+      _sleepChannelId,
       'Uyku Hatırlatmaları',
       channelDescription: 'Bebek uykusu için günlük hatırlatmalar',
       importance: Importance.max,
@@ -55,7 +111,7 @@ class NotificationService {
     const iosDetails = DarwinNotificationDetails();
 
     await _plugin.zonedSchedule(
-      0, // id
+      _sleepNotifId,
       'Uyku zamanı',
       'Bebeğin uyku kaydını eklemeyi unutma 💛',
       scheduledDate,
@@ -68,8 +124,13 @@ class NotificationService {
   }
 
   Future<void> cancelSleepReminder() async {
-    await _plugin.cancel(0);
+    await _plugin.cancel(_sleepNotifId);
   }
+
+  // ---------------------------
+  // Helpers
+  // ---------------------------
+  int _noteIdToInt(String noteId) => noteId.hashCode & 0x7fffffff;
 
   tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
     final now = tz.TZDateTime.now(tz.local);

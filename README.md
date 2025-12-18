@@ -133,6 +133,20 @@ Custom Widgets
 Contributions, bug fixes, and feature ideas are welcome.
 Please submit a pull request or open an issue.
 
+## 📄 Privacy Policy
+
+Baby Tracker prioritizes user privacy.
+
+The application does not collect personal data
+
+All records are stored locally on the user’s device
+
+No data is shared with third parties
+
+Advertisements are anonymous and do not identify users
+
+👉 [Read the Privacy Policy (EN)](privacy/privacy-policy-en.md)
+
 📄 License
 
 This project is licensed under the MIT License.

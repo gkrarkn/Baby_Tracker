@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../core/app_globals.dart';
+import '../core/app_globals.dart'; // appThemeColor + getCurrentDateTime()
 
 class VaccinePage extends StatefulWidget {
   const VaccinePage({super.key});
@@ -94,125 +94,241 @@ class _VaccinePageState extends State<VaccinePage> {
       if (_selectedVaccine == null) return;
       entry = "💉 $_selectedVaccine|$timeStamp";
     } else {
-      if (_medicineController.text.isEmpty) return;
-      entry = "💊 ${_medicineController.text}|$timeStamp";
+      final text = _medicineController.text.trim();
+      if (text.isEmpty) return;
+      entry = "💊 $text|$timeStamp";
       _medicineController.clear();
     }
 
-    setState(() {
-      vaccineLogs.insert(0, entry);
-      _saveLogs();
-    });
+    setState(() => vaccineLogs.insert(0, entry));
+    _saveLogs();
   }
 
   Future<void> _clearLogs() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Tüm kayıtlar silinsin mi?'),
+        content: const Text('Bu işlem geri alınamaz.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('vaccineLogs');
     setState(() => vaccineLogs.clear());
   }
 
+  void _deleteLogWithUndo(int index) {
+    final removed = vaccineLogs[index];
+
+    setState(() => vaccineLogs.removeAt(index));
+    _saveLogs();
+
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('İşlem silindi'),
+        action: SnackBarAction(
+          label: 'Geri al',
+          onPressed: () {
+            setState(() => vaccineLogs.insert(index, removed));
+            _saveLogs();
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text("Sağlık Takibi 🏥"),
-        backgroundColor: Colors.redAccent,
-        actions: [
-          IconButton(
-            onPressed: _clearLogs,
-            icon: const Icon(Icons.delete_outline, color: Colors.white),
+    final cs = Theme.of(context).colorScheme;
+
+    return ValueListenableBuilder<Color>(
+      valueListenable: appThemeColor,
+      builder: (context, mainColor, _) {
+        return Scaffold(
+          backgroundColor: cs.surface,
+          appBar: AppBar(
+            title: const Text("Sağlık Takibi 🏥"),
+            backgroundColor: mainColor,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                onPressed: _clearLogs,
+                icon: const Icon(Icons.delete_outline),
+                tooltip: "Tüm kayıtları sil",
+              ),
+            ],
           ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildTypeButton("Aşı", Icons.vaccines),
-                const SizedBox(width: 20),
-                _buildTypeButton("İlaç/Vitamin", Icons.medication),
-              ],
-            ),
-            const SizedBox(height: 30),
-            if (_selectedType == "Aşı")
-              Column(
-                children: [_buildVaccineDropdown(), _buildVaccineInfoCard()],
-              )
-            else
-              TextField(
-                controller: _medicineController,
-                decoration: InputDecoration(
-                  hintText: "İlaç veya vitamin adı girin...",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  prefixIcon: const Icon(Icons.edit, color: Colors.redAccent),
-                ),
-              ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: _saveEntry,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                ),
-                child: const Text(
-                  "KAYDET",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [mainColor.withValues(alpha: 0.10), cs.surface],
               ),
             ),
-            const SizedBox(height: 30),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                "Geçmiş İşlemler",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: vaccineLogs.length,
-                itemBuilder: (context, index) {
-                  final parts = vaccineLogs[index].split('|');
-                  final title = parts[0];
-                  final date = parts.length > 1 ? parts[1] : "";
-                  return Card(
-                    color: Colors.red.shade50,
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    child: ListTile(
-                      leading: Icon(
-                        title.contains("💉")
-                            ? Icons.vaccines
-                            : Icons.medication,
-                        color: Colors.red,
-                      ),
-                      title: Text(
-                        title,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Text(
-                        date,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      trailing: const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 20,
+            child: SafeArea(
+              top: false,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+                children: [
+                  _typeSelector(context, mainColor),
+                  const SizedBox(height: 14),
+
+                  if (_selectedType == "Aşı")
+                    Column(
+                      children: [
+                        _surfaceCard(
+                          context,
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
+                              children: [
+                                _buildVaccineDropdown(mainColor),
+                                _buildVaccineInfoCard(mainColor),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    _surfaceCard(
+                      context,
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: TextField(
+                          controller: _medicineController,
+                          decoration: InputDecoration(
+                            hintText: "İlaç veya vitamin adı yaz...",
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            prefixIcon: Icon(Icons.edit, color: mainColor),
+                          ),
+                        ),
                       ),
                     ),
-                  );
-                },
+
+                  const SizedBox(height: 12),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _saveEntry,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: mainColor,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: const Text(
+                        "KAYDET",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 18),
+                  _sectionTitle(context, "Geçmiş İşlemler"),
+                  const SizedBox(height: 10),
+
+                  if (vaccineLogs.isEmpty)
+                    _emptyState(context)
+                  else
+                    ...List.generate(vaccineLogs.length, (index) {
+                      final parts = vaccineLogs[index].split('|');
+                      final title = parts[0];
+                      final date = parts.length > 1 ? parts[1] : "";
+
+                      return Dismissible(
+                        key: ValueKey('${vaccineLogs[index]}_$index'),
+                        direction: DismissDirection.endToStart,
+                        background: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 6),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: mainColor.withValues(alpha: 0.85),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        onDismissed: (_) => _deleteLogWithUndo(index),
+                        child: _logTile(
+                          context,
+                          mainColor: mainColor,
+                          title: title,
+                          date: date,
+                        ),
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ---------------------------
+  // UI blocks
+  // ---------------------------
+
+  Widget _typeSelector(BuildContext context, Color mainColor) {
+    final cs = Theme.of(context).colorScheme;
+
+    return _surfaceCard(
+      context,
+      child: Padding(
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            Expanded(
+              child: _typeChip(
+                context,
+                label: "Aşı",
+                icon: Icons.vaccines,
+                selected: _selectedType == "Aşı",
+                mainColor: mainColor,
+                cs: cs,
+                onTap: () => setState(() {
+                  _selectedType = "Aşı";
+                  _selectedVaccine = null;
+                }),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _typeChip(
+                context,
+                label: "İlaç/Vitamin",
+                icon: Icons.medication,
+                selected: _selectedType == "İlaç/Vitamin",
+                mainColor: mainColor,
+                cs: cs,
+                onTap: () => setState(() {
+                  _selectedType = "İlaç/Vitamin";
+                  _selectedVaccine = null;
+                }),
               ),
             ),
           ],
@@ -221,12 +337,148 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _buildVaccineDropdown() {
+  Widget _typeChip(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required Color mainColor,
+    required ColorScheme cs,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? mainColor
+              : cs.surfaceVariant.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: selected
+                ? mainColor.withValues(alpha: 0.55)
+                : cs.outlineVariant.withValues(alpha: 0.45),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: selected ? Colors.white : cs.onSurfaceVariant),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.white : cs.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _logTile(
+    BuildContext context, {
+    required Color mainColor,
+    required String title,
+    required String date,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    final isVaccine = title.contains("💉");
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 15),
+      margin: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.redAccent),
-        borderRadius: BorderRadius.circular(10),
+        color: cs.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: mainColor.withValues(alpha: 0.12),
+          child: Icon(
+            isVaccine ? Icons.vaccines : Icons.medication,
+            color: mainColor,
+          ),
+        ),
+        title: Text(
+          title,
+          style: TextStyle(fontWeight: FontWeight.w800, color: cs.onSurface),
+        ),
+        subtitle: Text(date, style: TextStyle(color: cs.onSurfaceVariant)),
+        trailing: const Icon(Icons.check_circle, color: Colors.green, size: 20),
+      ),
+    );
+  }
+
+  Widget _emptyState(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: cs.onSurfaceVariant),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              "Henüz işlem yok.",
+              style: TextStyle(color: cs.onSurfaceVariant),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionTitle(BuildContext context, String text) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        fontWeight: FontWeight.bold,
+        color: cs.onSurface.withValues(alpha: 0.90),
+      ),
+    );
+  }
+
+  static Widget _surfaceCard(BuildContext context, {required Widget child}) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.40)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
+  // ---------------------------
+  // Vaccine blocks
+  // ---------------------------
+
+  Widget _buildVaccineDropdown(Color mainColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        border: Border.all(color: mainColor.withValues(alpha: 0.65)),
+        borderRadius: BorderRadius.circular(14),
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
@@ -236,6 +488,7 @@ class _VaccinePageState extends State<VaccinePage> {
           items: [
             const DropdownMenuItem<String>(
               value: 'HEADER_MANDATORY',
+              enabled: false,
               child: Text(
                 'Zorunlu Aşılar',
                 style: TextStyle(
@@ -249,6 +502,7 @@ class _VaccinePageState extends State<VaccinePage> {
             ),
             const DropdownMenuItem<String>(
               value: 'HEADER_OPTIONAL',
+              enabled: false,
               child: Text(
                 'Opsiyonel / Özel Aşılar',
                 style: TextStyle(
@@ -274,78 +528,58 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _buildVaccineInfoCard() {
+  Widget _buildVaccineInfoCard(Color mainColor) {
     if (_selectedVaccine == null) return const SizedBox.shrink();
+
+    final cs = Theme.of(context).colorScheme;
 
     final isMandatory = _mandatoryVaccines.contains(_selectedVaccine);
     final groupLabel = isMandatory ? 'Zorunlu Aşı' : 'Opsiyonel / Özel Aşı';
+
     final info =
         _vaccineInfo[_selectedVaccine] ??
         'Bu aşı hakkında detaylı takvim ve uygulama bilgisi için çocuk doktorunuza danışın.';
+
+    // Daha “sakin” ton: alert hissi yerine nötr bilgi kartı
+    final bg = cs.surfaceVariant.withValues(alpha: 0.35);
+    final border = mainColor.withValues(alpha: 0.35);
 
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+        color: bg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             groupLabel,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Colors.redAccent,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, color: cs.onSurface),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             info,
-            style: const TextStyle(fontSize: 13, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.25,
+              color: cs.onSurfaceVariant,
+            ),
           ),
-          const SizedBox(height: 8),
-          const Text(
+          const SizedBox(height: 10),
+          Text(
             "Not: Uygulama resmi aşı takvimi veya tıbbi tavsiye yerine geçmez. "
             "Aşı zamanlamasını mutlaka çocuk doktorunuzla birlikte planlayın.",
-            style: TextStyle(fontSize: 11, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 11,
+              height: 1.25,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.90),
+            ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTypeButton(String type, IconData icon) {
-    final isSelected = _selectedType == type;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedType = type;
-          _selectedVaccine = null;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.redAccent : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.grey),
-            const SizedBox(width: 8),
-            Text(
-              type,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

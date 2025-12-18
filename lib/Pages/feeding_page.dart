@@ -69,10 +69,11 @@ class _FeedingPageState extends State<FeedingPage> {
       _foodNoteController.clear();
     }
 
+    if (entry.isEmpty) return;
+
     setState(() {
       feedingLogs.insert(0, entry);
     });
-
     _saveLogs();
   }
 
@@ -82,11 +83,99 @@ class _FeedingPageState extends State<FeedingPage> {
     setState(() => feedingLogs.clear());
   }
 
+  // ---------- TODAY SUMMARY ----------
+  String _todayKey() {
+    final now = DateTime.now();
+    return "${now.day}.${now.month}.${now.year}";
+  }
+
+  int _todayTotalMl() {
+    final today = _todayKey();
+    int total = 0;
+
+    for (final log in feedingLogs) {
+      final parts = log.split('|');
+      if (parts.length < 2) continue;
+      if (!parts[1].startsWith(today)) continue;
+
+      final match = RegExp(r'(\d+)\s*ml').firstMatch(parts[0]);
+      if (match != null) total += int.parse(match.group(1)!);
+    }
+    return total;
+  }
+
+  int _todaySolidCount() {
+    final today = _todayKey();
+    int count = 0;
+
+    for (final log in feedingLogs) {
+      final parts = log.split('|');
+      if (parts.length < 2) continue;
+      if (!parts[1].startsWith(today)) continue;
+
+      if (parts[0].startsWith("🥣 Ek Gıda")) count++;
+    }
+    return count;
+  }
+
+  Widget _buildTodaySummaryCard(Color accent) {
+    final totalMl = _todayTotalMl();
+    final solidCount = _todaySolidCount();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.16),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.insights, color: accent),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Bugün",
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  "Toplam: $totalMl ml  •  Ek gıda: $solidCount",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.85),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mainColor = appThemeColor.value;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Beslenme 🍽️'),
         backgroundColor: mainColor,
@@ -99,43 +188,65 @@ class _FeedingPageState extends State<FeedingPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildTypeSelector(),
-            const SizedBox(height: 20),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildTypeSelector(),
+                    const SizedBox(height: 12),
+                    _buildTodaySummaryCard(Colors.orange),
+                    const SizedBox(height: 20),
 
-            if (_selectedType != 'Ek Gıda') _buildMlSelector(),
-            if (_selectedType == 'Ek Gıda') _buildSolidFoodInputs(),
+                    if (_selectedType != 'Ek Gıda') _buildMlSelector(),
+                    if (_selectedType == 'Ek Gıda') _buildSolidFoodInputs(),
 
-            const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-            SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: _saveFeeding,
-                icon: const Icon(Icons.save),
-                label: const Text(
-                  'KAYDET',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton.icon(
+                        onPressed: _saveFeeding,
+                        icon: const Icon(Icons.save),
+                        label: const Text(
+                          'KAYDET',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Geçmiş Beslenmeler',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    _buildLogList(),
+                    const SizedBox(height: 8),
+                  ],
                 ),
               ),
-            ),
-
-            const SizedBox(height: 24),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Geçmiş Beslenmeler',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            Expanded(child: _buildLogList()),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -224,18 +335,23 @@ class _FeedingPageState extends State<FeedingPage> {
   Widget _buildLogList() {
     if (feedingLogs.isEmpty) {
       return const Center(
-        child: Text('Henüz kayıt yok.', style: TextStyle(color: Colors.grey)),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12),
+          child: Text('Henüz kayıt yok.', style: TextStyle(color: Colors.grey)),
+        ),
       );
     }
 
     return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: feedingLogs.length,
       itemBuilder: (context, index) {
         final log = feedingLogs[index];
         final parts = log.split('|');
 
         return Dismissible(
-          key: ValueKey('$log$index'),
+          key: ValueKey(log), // ✅ index bağımsız key
           direction: DismissDirection.endToStart,
           background: Container(
             alignment: Alignment.centerRight,
@@ -248,13 +364,15 @@ class _FeedingPageState extends State<FeedingPage> {
             setState(() => feedingLogs.removeAt(index));
             _saveLogs();
 
+            ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Beslenme silindi'),
                 action: SnackBarAction(
                   label: 'Geri al',
                   onPressed: () {
-                    setState(() => feedingLogs.insert(index, removed));
+                    final insertIndex = index.clamp(0, feedingLogs.length);
+                    setState(() => feedingLogs.insert(insertIndex, removed));
                     _saveLogs();
                   },
                 ),

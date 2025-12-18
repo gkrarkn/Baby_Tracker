@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-import 'pages/dashboard_page.dart';
 import 'core/app_globals.dart';
 import 'core/notification_service.dart';
+import 'pages/dashboard_page.dart';
 import 'theme/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await MobileAds.instance.initialize();
   await NotificationService.instance.init();
+
   runApp(const BabyTrackerApp());
 }
 
@@ -40,15 +42,15 @@ class _BabyTrackerAppState extends State<BabyTrackerApp> {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<Color>(
       valueListenable: appThemeColor,
-      builder: (context, color, child) {
+      builder: (context, seedColor, _) {
         final lightTheme = ThemeData(
+          useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: color,
+            seedColor: seedColor,
             brightness: Brightness.light,
           ),
-          useMaterial3: true,
           appBarTheme: AppBarTheme(
-            backgroundColor: color,
+            backgroundColor: seedColor,
             foregroundColor: Colors.white,
             centerTitle: true,
             titleTextStyle: const TextStyle(
@@ -59,13 +61,13 @@ class _BabyTrackerAppState extends State<BabyTrackerApp> {
         );
 
         final darkTheme = ThemeData(
+          useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: color,
+            seedColor: seedColor,
             brightness: Brightness.dark,
           ),
-          useMaterial3: true,
           appBarTheme: AppBarTheme(
-            backgroundColor: color,
+            backgroundColor: seedColor,
             foregroundColor: Colors.white,
             centerTitle: true,
             titleTextStyle: const TextStyle(
@@ -81,9 +83,21 @@ class _BabyTrackerAppState extends State<BabyTrackerApp> {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
               title: 'Bebek Takip',
+
+              // Tema
               theme: lightTheme,
               darkTheme: darkTheme,
               themeMode: _themeController.mode,
+
+              // TR dil / DatePicker vb.
+              locale: const Locale('tr', 'TR'),
+              supportedLocales: const [Locale('tr', 'TR')],
+              localizationsDelegates: const [
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+
               home: DashboardPage(themeController: _themeController),
             );
           },
