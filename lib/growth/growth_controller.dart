@@ -14,7 +14,10 @@ class GrowthController extends ChangeNotifier {
 
   final List<GrowthEntry> _entries = [];
 
-  List<GrowthEntry> get entries {
+  // growth_controller.dart içine EKLE (class GrowthController içinde)
+
+  // En yeni en üstte (UI list için)
+  List<GrowthEntry> get entriesSorted {
     final list = List<GrowthEntry>.from(_entries);
     list.sort((a, b) => b.date.compareTo(a.date)); // newest first
     return list;
