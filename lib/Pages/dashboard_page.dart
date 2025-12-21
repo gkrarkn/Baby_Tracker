@@ -186,8 +186,8 @@ class _DashboardPageState extends State<DashboardPage> {
                               ),
                               _menuCard(
                                 context,
-                                icon: Icons.music_note,
-                                title: 'Ninniler',
+                                icon: Icons.queue_music_rounded,
+                                title: 'Müzik Kutusu',
                                 accent: Colors.purpleAccent,
                                 onTap: () => Navigator.push(
                                   context,

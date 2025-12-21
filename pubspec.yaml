@@ -32,6 +32,7 @@ flutter:
     - assets/icons/
     - assets/audio/
     - assets/screenshots/
+    - assets/recipes/recipes_tr.json
 
 dev_dependencies:
   flutter_test:

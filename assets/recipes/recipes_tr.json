@@ -1,0 +1,400 @@
+[
+    {
+        "id": "r1",
+        "title": "Yoğurtlu Meyve Püresi",
+        "ageMinMonths": 6,
+        "prepTimeMin": 7,
+        "tags": [
+            "başlangıç",
+            "pratik",
+            "soğuk"
+        ],
+        "ingredients": [
+            "3 yemek kaşığı yoğurt (tuzsuz)",
+            "Yarım küçük elma veya armut (soyulmuş)"
+        ],
+        "steps": [
+            "Meyveyi iyice yıka, kabuğunu soy ve çekirdeklerini çıkar.",
+            "Meyveyi rendenin ince tarafıyla rendele veya çatalla püre yap.",
+            "Yoğurdu bir kasede pürüzsüz olana kadar karıştır.",
+            "Meyve püresini yoğurda ekleyip karıştır.",
+            "Kıvam çok yoğun gelirse 1–2 çay kaşığı içme suyu ile aç.",
+            "Hemen servis et; bekleteceksen buzdolabında kısa süre tut."
+        ],
+        "nutritionNote": "İlk ek gıdalarda sade ve tek içerik mantığıyla ilerlemek iyi olur. Yeni meyveyi tek başına denedikten sonra yoğurtla karıştır."
+    },
+    {
+        "id": "r2",
+        "title": "Avokado Püresi (Yumuşak Kıvam)",
+        "ageMinMonths": 6,
+        "prepTimeMin": 5,
+        "tags": [
+            "başlangıç",
+            "sağlıklı yağ",
+            "pratik"
+        ],
+        "ingredients": [
+            "Yarım olgun avokado",
+            "1–2 çay kaşığı içme suyu (opsiyonel)"
+        ],
+        "steps": [
+            "Avokadoyu ortadan ikiye kes, çekirdeğini çıkar.",
+            "İç kısmından 2–3 yemek kaşığı kadar al ve kaseye koy.",
+            "Çatalla pürüzsüzleşene kadar ez.",
+            "Kıvamı açmak istersen 1–2 çay kaşığı su ekle.",
+            "Bebeğin alışması için ilk denemede küçük porsiyonla başla.",
+            "Servis etmeden önce pürenin içinde sert parça kalmadığından emin ol."
+        ],
+        "nutritionNote": "Avokado çabuk kararır; mümkünse taze hazırlanıp tüketilmeli."
+    },
+    {
+        "id": "r3",
+        "title": "Kabak + Patates Püresi",
+        "ageMinMonths": 6,
+        "prepTimeMin": 18,
+        "tags": [
+            "sebze",
+            "başlangıç",
+            "öğün"
+        ],
+        "ingredients": [
+            "1 küçük kabak",
+            "1 küçük patates",
+            "1 çay bardağı içme suyu"
+        ],
+        "steps": [
+            "Kabağı ve patatesi yıka, kabuklarını soy.",
+            "Küçük küpler halinde doğra.",
+            "Tencerede suyla birlikte yumuşayana kadar haşla (yaklaşık 12–15 dk).",
+            "Sebzeleri süzüp bir kaseye al; gerekirse haşlama suyundan 1–2 kaşık ayır.",
+            "Blenderdan geçir veya çatalla püre yap.",
+            "Kıvamı haşlama suyuyla ayarlayıp ılık servis et."
+        ],
+        "nutritionNote": "İlk denemelerde baharat ekleme. Sonraki aylarda çok az zeytinyağı ekleyebilirsin."
+    },
+    {
+        "id": "r4",
+        "title": "Havuç + Pirinç Püresi",
+        "ageMinMonths": 6,
+        "prepTimeMin": 22,
+        "tags": [
+            "tok tutar",
+            "tahıl",
+            "sebze"
+        ],
+        "ingredients": [
+            "1 küçük havuç",
+            "1 yemek kaşığı pirinç",
+            "1,5 çay bardağı su"
+        ],
+        "steps": [
+            "Pirinçleri bol suyla yıka.",
+            "Havucu soyup küçük doğra.",
+            "Pirinç ve havucu aynı tencerede suyla birlikte haşla.",
+            "Pirinç iyice yumuşayıp dağılana kadar pişir (yaklaşık 15–18 dk).",
+            "Karışımı blenderdan geçir veya çatalla püre yap.",
+            "Kıvamı yoğun gelirse 1–2 çay kaşığı sıcak su ekleyip ılık servis et."
+        ],
+        "nutritionNote": "Pirinç bazı bebeklerde kabızlığa yatkın olabilir; dengelemek için sonraki gün sebze ağırlıklı ilerleyebilirsin."
+    },
+    {
+        "id": "r5",
+        "title": "Muzlu Yoğurt (Şekersiz)",
+        "ageMinMonths": 6,
+        "prepTimeMin": 5,
+        "tags": [
+            "pratik",
+            "tatlı ihtiyacı",
+            "soğuk"
+        ],
+        "ingredients": [
+            "3 yemek kaşığı yoğurt (tuzsuz)",
+            "Yarım küçük muz (olgun)"
+        ],
+        "steps": [
+            "Muzu soy ve çatalla iyice ez.",
+            "Yoğurdu pürüzsüzleşene kadar karıştır.",
+            "Ezilmiş muzu yoğurda ekleyip karıştır.",
+            "Kıvam çok koyu gelirse 1 çay kaşığı su ekle.",
+            "İlk denemede küçük porsiyonla başla.",
+            "Hemen servis et."
+        ],
+        "nutritionNote": "Muz tatlılık verdiği için ekstra şeker gerekmez."
+    },
+    {
+        "id": "r6",
+        "title": "Yoğurtlu Yulaf Lapası",
+        "ageMinMonths": 7,
+        "prepTimeMin": 12,
+        "tags": [
+            "tok tutar",
+            "tahıl",
+            "kahvaltı"
+        ],
+        "ingredients": [
+            "1 yemek kaşığı ince yulaf",
+            "Yarım çay bardağı su",
+            "2 yemek kaşığı yoğurt"
+        ],
+        "steps": [
+            "Yulafı suyla küçük bir tencereye al.",
+            "Kısık ateşte karıştırarak yulaf yumuşayana kadar pişir (5–7 dk).",
+            "Ocaktan alıp ılımasını bekle (çok sıcak olmasın).",
+            "Yoğurdu ekleyip karıştır.",
+            "Kıvamı yoğun gelirse 1 çay kaşığı su ile aç.",
+            "Ilık servis et."
+        ],
+        "nutritionNote": "Gluten hassasiyeti/alerjisi şüphesi varsa doktor önerisiyle ilerle."
+    },
+    {
+        "id": "r7",
+        "title": "Ev Tarhanası Çorbası (Tuzsuz)",
+        "ageMinMonths": 7,
+        "prepTimeMin": 15,
+        "tags": [
+            "çorba",
+            "ev yapımı",
+            "öğün"
+        ],
+        "ingredients": [
+            "1 yemek kaşığı ev tarhanası",
+            "1 su bardağı su",
+            "1 çay kaşığı zeytinyağı (opsiyonel)"
+        ],
+        "steps": [
+            "Tarhanayı bir kasede az suyla topaksız şekilde aç.",
+            "Tencereye 1 su bardağı suyu koyup kaynamaya yakın ısıt.",
+            "Açtığın tarhanayı tencereye ekle, sürekli karıştır.",
+            "Kısık ateşte 7–10 dk pişir; kıvam koyulaşınca ocaktan al.",
+            "Ilıyınca istersen 1 çay kaşığı zeytinyağı ekle.",
+            "Pütür kaldıysa süzerek servis et."
+        ],
+        "nutritionNote": "Tarhana içeriklerine göre alerjen barındırabilir (gluten/süt). İlk denemeyi küçük porsiyonla yap."
+    },
+    {
+        "id": "r8",
+        "title": "Mercimek Çorbası (Süzülmüş)",
+        "ageMinMonths": 7,
+        "prepTimeMin": 25,
+        "tags": [
+            "çorba",
+            "protein",
+            "doyurucu"
+        ],
+        "ingredients": [
+            "2 yemek kaşığı kırmızı mercimek",
+            "1,5 su bardağı su",
+            "1 küçük havuç (opsiyonel)"
+        ],
+        "steps": [
+            "Mercimeği bol suyla iyice yıka.",
+            "Havuç kullanacaksan soyup küçük doğra.",
+            "Mercimek (ve havuç) ile suyu tencereye al.",
+            "Yumuşayana kadar haşla (15–20 dk).",
+            "Blenderdan geçir ve ince süzgeçten süz (ilk dönem için).",
+            "Ilık servis et; kıvam çok koyuysa su ekle."
+        ],
+        "nutritionNote": "Gaz yaparsa porsiyonu küçültüp daha seyrek verebilirsin."
+    },
+    {
+        "id": "r9",
+        "title": "Bebek Pancake",
+        "ageMinMonths": 8,
+        "prepTimeMin": 15,
+        "tags": [
+            "kahvaltı",
+            "pratik",
+            "finger food"
+        ],
+        "ingredients": [
+            "1 yumurta",
+            "2 yemek kaşığı yoğurt",
+            "2 yemek kaşığı un"
+        ],
+        "steps": [
+            "Yumurtayı bir kasede çırp.",
+            "Yoğurdu ekleyip pürüzsüz olana kadar karıştır.",
+            "Unu ekleyip boza kıvamına getir; çok koyuysa 1 çay kaşığı su ekle.",
+            "Yapışmaz tavayı çok az yağlayıp kısık ateşte ısıt.",
+            "Karışımdan küçük küçük dök; iki yüzünü de kontrollü pişir.",
+            "Ilıyınca küçük parçalara bölerek servis et."
+        ],
+        "nutritionNote": "Yumurta alerjeni olabilir. İlk yumurta denemelerini gündüz ve küçük porsiyonla yapmak daha güvenlidir."
+    },
+    {
+        "id": "r10",
+        "title": "Sebzeli Mini Omlet",
+        "ageMinMonths": 8,
+        "prepTimeMin": 15,
+        "tags": [
+            "protein",
+            "kahvaltı",
+            "pratik"
+        ],
+        "ingredients": [
+            "1 yumurta",
+            "2 yemek kaşığı rendelenmiş kabak",
+            "1 yemek kaşığı yoğurt (opsiyonel)"
+        ],
+        "steps": [
+            "Kabağı rendele; fazla suyunu hafifçe sık.",
+            "Yumurtayı çırp, kabağı ekle.",
+            "İstersen yumuşaklık için 1 kaşık yoğurt ekle.",
+            "Yapışmaz tavada kısık ateşte pişir.",
+            "Altı pişince ters çevir ya da kapağını kapatıp iyice pişir.",
+            "Ilıyınca küçük parçalara bölerek servis et."
+        ],
+        "nutritionNote": "Yumurta içerir. Tuz ekleme."
+    },
+    {
+        "id": "r11",
+        "title": "Muzlu Yulaf Kurabiyesi (Şekersiz)",
+        "ageMinMonths": 8,
+        "prepTimeMin": 25,
+        "tags": [
+            "atıştırmalık",
+            "şekersiz",
+            "fırın"
+        ],
+        "ingredients": [
+            "1 küçük olgun muz",
+            "3 yemek kaşığı ince yulaf",
+            "1 yemek kaşığı yoğurt (opsiyonel)"
+        ],
+        "steps": [
+            "Fırını 180°C’ye ısıt.",
+            "Muzu çatalla tamamen ez.",
+            "Yulafı ekleyip karıştır; çok kuruysa 1 kaşık yoğurt ekle.",
+            "Karışımdan ceviz büyüklüğünde parçalar alıp tepsiye diz.",
+            "Kaşıkla hafif bastırarak kurabiye formu ver.",
+            "12–15 dk pişir, ılıyınca servis et."
+        ],
+        "nutritionNote": "Dokuya alışma için iyi bir ara öğündür. Sertleşirse daha kısa pişir."
+    },
+    {
+        "id": "r12",
+        "title": "Yulaf Topu (Şekersiz)",
+        "ageMinMonths": 9,
+        "prepTimeMin": 10,
+        "tags": [
+            "pratik",
+            "atıştırmalık",
+            "dondurulabilir"
+        ],
+        "ingredients": [
+            "1 küçük muz",
+            "4 yemek kaşığı yulaf",
+            "1 çay kaşığı pekmez (opsiyonel, ileri aylar)"
+        ],
+        "steps": [
+            "Muzu çatalla püre yap.",
+            "Yulafı ekleyip yoğurur gibi karıştır.",
+            "Kıvam çok yumuşaksa 1 kaşık daha yulaf ekle.",
+            "Küçük toplar yap.",
+            "10 dk buzdolabında dinlendir.",
+            "Parmak gıda olarak servis et."
+        ],
+        "nutritionNote": "Pekmez opsiyoneldir; erken dönemde kullanmayabilirsin."
+    },
+    {
+        "id": "r13",
+        "title": "Fırında Sebzeli Mücver",
+        "ageMinMonths": 9,
+        "prepTimeMin": 30,
+        "tags": [
+            "finger food",
+            "sebze",
+            "fırın"
+        ],
+        "ingredients": [
+            "1 küçük kabak",
+            "1 yumurta",
+            "2 yemek kaşığı un",
+            "1 yemek kaşığı yoğurt (opsiyonel)"
+        ],
+        "steps": [
+            "Fırını 190°C’ye ısıt.",
+            "Kabağı rendele ve fazla suyunu sık.",
+            "Yumurta, un ve istersen yoğurtla karıştır.",
+            "Kaşıkla küçük parçalar halinde yağlı kağıda diz.",
+            "15–18 dk pişir; dışı hafif kızarınca çıkar.",
+            "Ilıyınca servis et."
+        ],
+        "nutritionNote": "Yumurta ve gluten içerebilir. Kıvamı fazla sulu olursa kabak suyunu daha iyi sık."
+    },
+    {
+        "id": "r14",
+        "title": "Sebzeli Şehriye Pilavı (Yumuşak)",
+        "ageMinMonths": 10,
+        "prepTimeMin": 22,
+        "tags": [
+            "öğün",
+            "tok tutar",
+            "pratik"
+        ],
+        "ingredients": [
+            "2 yemek kaşığı tel şehriye",
+            "Yarım küçük havuç (çok küçük doğranmış)",
+            "1 çay bardağı su"
+        ],
+        "steps": [
+            "Havucu çok küçük doğra ve tencerede 2–3 dk yumuşat.",
+            "Şehriyeyi ekle, 1–2 dk karıştır.",
+            "Suyu ekleyip kısık ateşte pişir.",
+            "Şehriye tamamen yumuşayana kadar devam et.",
+            "Gerekirse 1–2 kaşık su ekleyerek daha yumuşak kıvam yap.",
+            "Ilıyınca servis et."
+        ],
+        "nutritionNote": "Şehriye gluten içerebilir. İlk denemede küçük porsiyon önerilir."
+    },
+    {
+        "id": "r15",
+        "title": "Yoğurtlu Makarna (Minik Boy)",
+        "ageMinMonths": 10,
+        "prepTimeMin": 18,
+        "tags": [
+            "öğün",
+            "pratik",
+            "sevilen"
+        ],
+        "ingredients": [
+            "1 çay bardağı küçük makarna",
+            "3 yemek kaşığı yoğurt",
+            "1 çay kaşığı zeytinyağı (opsiyonel)"
+        ],
+        "steps": [
+            "Makarnayı tuzsuz suda yumuşayana kadar haşla.",
+            "Süzüp ılımasını bekle.",
+            "Yoğurdu pürüzsüzleşene kadar karıştır.",
+            "Makarnayı yoğurda ekleyip karıştır.",
+            "İstersen 1 çay kaşığı zeytinyağı ekle.",
+            "Ilık servis et."
+        ],
+        "nutritionNote": "Gluten/süt içerebilir. Yoğurdu sıcak makarnaya ekleme; önce ılısın."
+    },
+    {
+        "id": "r16",
+        "title": "Fırında Elmalı Yulaf",
+        "ageMinMonths": 12,
+        "prepTimeMin": 25,
+        "tags": [
+            "tatlı",
+            "şekersiz",
+            "fırın"
+        ],
+        "ingredients": [
+            "1 küçük elma (rendelenmiş)",
+            "4 yemek kaşığı yulaf",
+            "Yarım çay bardağı su veya süt (opsiyonel)"
+        ],
+        "steps": [
+            "Fırını 180°C’ye ısıt.",
+            "Elmayı rendele; çok suluysa hafif sık.",
+            "Yulafla karıştır, kıvamı açmak için su ekle.",
+            "Karışımı küçük bir fırın kabına yay.",
+            "15–18 dk pişir; üstü hafif tutunca çıkar.",
+            "Ilıyınca kaşıkla servis et."
+        ],
+        "nutritionNote": "Yulaf/gluten hassasiyetinde dikkat. Şeker ekleme; elma yeterli tat verir."
+    }
+]
