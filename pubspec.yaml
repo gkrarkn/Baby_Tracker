@@ -33,6 +33,8 @@ flutter:
     - assets/audio/
     - assets/screenshots/
     - assets/recipes/recipes_tr.json
+    - assets/privacy-policy-tr.html
+    - assets/privacy-policy-en.html
 
 dev_dependencies:
   flutter_test:
