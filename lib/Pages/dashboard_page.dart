@@ -1,8 +1,8 @@
 // lib/pages/dashboard_page.dart
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/analytics_service.dart';
 import '../core/app_globals.dart';
 import '../theme/theme_controller.dart';
 
@@ -29,59 +29,18 @@ class _DashboardPageState extends State<DashboardPage> {
   static const double _gridSpacing = 12;
   static const double _cardRadius = 18;
 
-  // TODO: Prod’a çıkarken kendi adUnitId’n ile değiştir.
-  static const String _adUnitIdIosTest =
-      'ca-app-pub-3940256099942544/2934735716';
-
-  BannerAd? _bannerAd;
-  bool _isBannerReady = false;
-
-  // İleride onboarding ile alabilirsin. Şimdilik placeholder.
   static const String _userName = 'Göker';
 
   @override
   void initState() {
     super.initState();
-    _initBanner();
-  }
-
-  void _initBanner() {
-    final ad = BannerAd(
-      size: AdSize.banner,
-      adUnitId: _adUnitIdIosTest,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (!mounted) return;
-          setState(() => _isBannerReady = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-          if (!mounted) return;
-          setState(() {
-            _isBannerReady = false;
-            _bannerAd = null;
-          });
-          debugPrint('Banner error: $error');
-        },
-      ),
-    );
-
-    _bannerAd = ad;
-    ad.load();
-  }
-
-  @override
-  void dispose() {
-    _bannerAd?.dispose();
-    super.dispose();
+    AnalyticsService.instance.appOpen();
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    // appThemeColor ValueNotifier: renk değişince dashboard da anlık güncellensin
     return ValueListenableBuilder<Color>(
       valueListenable: appThemeColor,
       builder: (context, mainColor, _) {
@@ -91,7 +50,7 @@ class _DashboardPageState extends State<DashboardPage> {
             foregroundColor: Colors.white,
             centerTitle: true,
             elevation: 0,
-            title: _appBarTitlePill(mainColor),
+            title: _appBarTitlePill(),
             actions: [
               IconButton(
                 icon: const Icon(Icons.settings),
@@ -115,118 +74,116 @@ class _DashboardPageState extends State<DashboardPage> {
                 colors: [mainColor.withValues(alpha: 0.10), cs.surface],
               ),
             ),
-            child: Column(
-              children: [
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      _pageHPadding,
-                      _pageVPadding,
-                      _pageHPadding,
-                      12,
-                    ),
-                    child: Column(
-                      children: [
-                        _welcomeCard(context, mainColor),
-                        const SizedBox(height: 16),
-                        Expanded(
-                          child: GridView.count(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: _gridSpacing,
-                            mainAxisSpacing: _gridSpacing,
-                            childAspectRatio: 1.05,
-                            children: [
-                              _menuCard(
-                                context,
-                                icon: Icons.bedtime,
-                                title: 'Uyku',
-                                accent: mainColor,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const SleepPage(),
-                                  ),
-                                ),
-                              ),
-                              _menuCard(
-                                context,
-                                icon: Icons.restaurant,
-                                title: 'Beslenme',
-                                accent: Colors.orange,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const FeedingPage(),
-                                  ),
-                                ),
-                              ),
-                              _menuCard(
-                                context,
-                                icon: Icons.medical_services,
-                                title: 'Aşı & İlaç',
-                                accent: Colors.red,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const VaccinePage(),
-                                  ),
-                                ),
-                              ),
-                              _menuCard(
-                                context,
-                                icon: Icons.show_chart,
-                                title: 'Gelişim',
-                                accent: Colors.teal,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const GrowthPage(),
-                                  ),
-                                ),
-                              ),
-                              _menuCard(
-                                context,
-                                icon: Icons.queue_music_rounded,
-                                title: 'Müzik Kutusu',
-                                accent: Colors.purpleAccent,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LullabyPage(),
-                                  ),
-                                ),
-                              ),
-                              _menuCard(
-                                context,
-                                icon: Icons.note_alt,
-                                title: 'Notlar',
-                                accent: const Color(0xFF6D8A8F),
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const NotesPage(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                _pageHPadding,
+                _pageVPadding,
+                _pageHPadding,
+                12,
+              ),
+              child: Column(
+                children: [
+                  _welcomeCard(context, mainColor),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double availableH = constraints.maxHeight;
+                        final double availableW = constraints.maxWidth;
 
-                // Banner: sadece hazırsa çiz
-                if (_isBannerReady && _bannerAd != null)
-                  SafeArea(
-                    top: false,
-                    child: SizedBox(
-                      height: _bannerAd!.size.height.toDouble(),
-                      width: double.infinity,
-                      child: AdWidget(ad: _bannerAd!),
+                        // 2 sütun, 3 satır
+                        final double tileW = (availableW - _gridSpacing) / 2;
+                        final double tileH =
+                            (availableH - (_gridSpacing * 2)) / 3;
+
+                        final double ratio = tileW / tileH;
+
+                        return GridView.count(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: _gridSpacing,
+                          mainAxisSpacing: _gridSpacing,
+                          childAspectRatio: ratio,
+                          physics: const NeverScrollableScrollPhysics(),
+                          children: [
+                            _menuCard(
+                              context,
+                              icon: Icons.bedtime,
+                              title: 'Uyku',
+                              accent: mainColor,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const SleepPage(),
+                                ),
+                              ),
+                            ),
+                            _menuCard(
+                              context,
+                              icon: Icons.restaurant,
+                              title: 'Beslenme',
+                              accent: Colors.orange,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const FeedingPage(),
+                                ),
+                              ),
+                            ),
+                            _menuCard(
+                              context,
+                              icon: Icons.medical_services,
+                              title: 'Aşı & İlaç',
+                              accent: Colors.red,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const VaccinePage(),
+                                ),
+                              ),
+                            ),
+                            _menuCard(
+                              context,
+                              icon: Icons.show_chart,
+                              title: 'Gelişim',
+                              accent: Colors.teal,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GrowthPage(),
+                                ),
+                              ),
+                            ),
+                            _menuCard(
+                              context,
+                              icon: Icons.queue_music_rounded,
+                              title: 'Müzik Kutusu',
+                              accent: Colors.purpleAccent,
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LullabyPage(),
+                                ),
+                              ),
+                            ),
+                            _menuCard(
+                              context,
+                              icon: Icons.note_alt,
+                              title: 'Notlar',
+                              accent: const Color(0xFF6D8A8F),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const NotesPage(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ),
-              ],
+                ],
+              ),
             ),
           ),
         );
@@ -237,7 +194,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // -------------------------
   // AppBar Title (Pill)
   // -------------------------
-  Widget _appBarTitlePill(Color mainColor) {
+  Widget _appBarTitlePill() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
@@ -256,9 +213,8 @@ class _DashboardPageState extends State<DashboardPage> {
         'Bebek Takip',
         style: GoogleFonts.nunito(
           fontSize: 18,
-          fontWeight: FontWeight.w700, // w800 -> w700
-          letterSpacing: 0.0, // 0.15 -> 0
-          height: 1.12, // biraz daha “soft”
+          fontWeight: FontWeight.w700,
+          height: 1.12,
           color: Colors.white,
         ),
       ),
@@ -270,9 +226,7 @@ class _DashboardPageState extends State<DashboardPage> {
   // -------------------------
   Widget _welcomeCard(BuildContext context, Color mainColor) {
     final cs = Theme.of(context).colorScheme;
-
     final greeting = _greetingByTime();
-    final subtitle = 'Miniğin bugün nasıl?';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -297,7 +251,6 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       child: Row(
         children: [
-          // Sol ikon kutusu (soft)
           Container(
             width: 56,
             height: 56,
@@ -315,7 +268,6 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Icon(Icons.child_care, color: mainColor, size: 30),
           ),
           const SizedBox(width: 14),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,45 +280,30 @@ class _DashboardPageState extends State<DashboardPage> {
                     color: cs.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
-                  subtitle,
+                  'Bebeğin bugün nasıl?',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.nunito(
-                    fontSize: 13.5,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 14.2,
+                    fontWeight: FontWeight.w900,
                     color: cs.onSurfaceVariant,
-                    height: 1.2,
+                    height: 1.15,
                   ),
                 ),
                 const SizedBox(height: 12),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 10,
-                  children: [
-                    _miniChip(
-                      context,
-                      icon: Icons.add,
-                      label: 'Hızlı kayıt',
-                      mainColor: mainColor,
-                      onTap: () {
-                        _showComingSoonSnack(context);
-                      },
-                    ),
-                    _miniChip(
-                      context,
-                      icon: Icons.insights_outlined,
-                      label: 'Özet',
-                      mainColor: mainColor,
-                      onTap: () {
-                        _showComingSoonSnack(context);
-                      },
-                    ),
-                  ],
+                _miniChipDisabledWithInfoInside(
+                  context,
+                  icon: Icons.insights_outlined,
+                  label: 'Özet',
+                  sheetTitle: 'Özet',
+                  sheetBody:
+                      'Özet yakında.\n\nUyku/sağlık verileri birikince otomatik özet gösterecek.',
                 ),
               ],
             ),
           ),
-
           Icon(Icons.auto_awesome, color: mainColor.withValues(alpha: 0.55)),
         ],
       ),
@@ -375,62 +312,107 @@ class _DashboardPageState extends State<DashboardPage> {
 
   String _greetingByTime() {
     final hour = DateTime.now().hour;
-
-    // 05:00–10:59
     if (hour >= 5 && hour < 11) return 'Günaydın';
-    // 11:00–17:59
     if (hour >= 11 && hour < 18) return 'Merhaba';
-    // 18:00–22:59
     if (hour >= 18 && hour < 23) return 'İyi akşamlar';
-    // 23:00–04:59
     return 'İyi geceler';
   }
 
-  void _showComingSoonSnack(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Bu özellik yakında.',
-          style: GoogleFonts.nunito(fontWeight: FontWeight.w700),
-        ),
-        duration: const Duration(seconds: 2),
+  Widget _miniChipDisabledWithInfoInside(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required String sheetTitle,
+    required String sheetBody,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      constraints: const BoxConstraints(minWidth: 110, maxWidth: 150),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: 0.70),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 15,
+            color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: GoogleFonts.nunito(
+              fontSize: 12.2,
+              fontWeight: FontWeight.w800,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.70),
+            ),
+          ),
+          const SizedBox(width: 6),
+          InkWell(
+            onTap: () =>
+                _showInfoSheet(context, title: sheetTitle, body: sheetBody),
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(
+                Icons.info_outline_rounded,
+                size: 16,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.75),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // -------------------------
-  // Mini Chip
-  // -------------------------
-  Widget _miniChip(
+  void _showInfoSheet(
     BuildContext context, {
-    required IconData icon,
-    required String label,
-    required Color mainColor,
-    required VoidCallback onTap,
+    required String title,
+    required String body,
   }) {
     final cs = Theme.of(context).colorScheme;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(999),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        decoration: BoxDecoration(
-          color: cs.surface.withValues(alpha: 0.92),
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.35)),
-        ),
-        child: Row(
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 16, color: mainColor),
-            const SizedBox(width: 8),
             Text(
-              label,
+              title,
               style: GoogleFonts.nunito(
-                fontSize: 12.8,
-                fontWeight: FontWeight.w800,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
                 color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              body,
+              style: GoogleFonts.nunito(
+                height: 1.25,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Anladım'),
               ),
             ),
           ],
@@ -477,7 +459,6 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // İkonu daire içine aldık
             Container(
               width: 54,
               height: 54,
@@ -488,8 +469,6 @@ class _DashboardPageState extends State<DashboardPage> {
               child: Icon(icon, size: 30, color: accent),
             ),
             const SizedBox(height: 12),
-
-            // Grid yazıları: 16px + w700
             Text(
               title,
               textAlign: TextAlign.center,

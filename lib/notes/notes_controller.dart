@@ -1,104 +1,130 @@
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+// lib/notes/notes_controller.dart
+import 'package:flutter/foundation.dart';
 
-import '../core/notification_service.dart';
 import 'note_model.dart';
+import 'notes_repository.dart';
 
 class NotesController extends ChangeNotifier {
-  static const _storageKey = 'notes_v5';
+  final NotesRepository _repo;
 
-  final List<Note> _notes = [];
-  String _searchQuery = '';
+  NotesController({NotesRepository? repository})
+    : _repo = repository ?? const NotesRepository();
 
+  final List<Note> _all = [];
+  String _query = '';
+
+  bool _loading = false;
+  bool get isLoading => _loading;
+
+  /// UI bunu kullanır (arama + sıralama uygulanmış liste)
   List<Note> get notes {
-    final q = _searchQuery.trim().toLowerCase();
-
+    final q = _query.trim().toLowerCase();
     final filtered = q.isEmpty
-        ? List<Note>.from(_notes)
-        : _notes.where((n) => n.text.toLowerCase().contains(q)).toList();
+        ? List<Note>.from(_all)
+        : _all.where((n) => n.text.toLowerCase().contains(q)).toList();
 
-    filtered.sort((a, b) {
-      if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
-      return b.createdAt.compareTo(a.createdAt);
-    });
-
+    filtered.sort(_noteSort);
     return filtered;
   }
 
-  String get searchQuery => _searchQuery;
-
   Future<void> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_storageKey);
-    if (raw == null) return;
+    _loading = true;
+    notifyListeners();
 
-    _notes
+    final loaded = await _repo.load();
+    _all
       ..clear()
-      ..addAll(Note.decodeList(raw));
+      ..addAll(loaded);
+    _all.sort(_noteSort);
 
+    _loading = false;
     notifyListeners();
   }
 
-  Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_storageKey, Note.encodeList(_notes));
-  }
-
-  void setSearch(String value) {
-    _searchQuery = value;
+  void setSearch(String v) {
+    _query = v;
     notifyListeners();
   }
 
   Future<void> add(Note note) async {
-    _notes.add(note);
-    await _persist();
+    // boş not eklenmesin (tek satır güvenlik)
+    if (note.text.trim().isEmpty) return;
+
+    _all.insert(0, note);
+    _all.sort(_noteSort);
     notifyListeners();
+    await _repo.save(_all);
   }
 
-  Future<void> update(Note note) async {
-    final index = _notes.indexWhere((n) => n.id == note.id);
-    if (index == -1) return;
+  Future<void> update(Note updated) async {
+    if (updated.text.trim().isEmpty) return;
 
-    _notes[index] = note;
-    await _persist();
+    final idx = _all.indexWhere((n) => n.id == updated.id);
+    if (idx == -1) return;
+
+    _all[idx] = updated;
+    _all.sort(_noteSort);
     notifyListeners();
-  }
-
-  Future<void> delete(Note note) async {
-    // Notes reminder deterministic id ile noteId’den üretildiği için
-    // notificationId tutmaya gerek yok; direkt note.id üzerinden iptal ediyoruz.
-    await NotificationService.instance.cancelNoteReminder(note.id);
-
-    _notes.removeWhere((n) => n.id == note.id);
-    await _persist();
-    notifyListeners();
+    await _repo.save(_all);
   }
 
   Future<void> togglePin(Note note) async {
-    await update(note.copyWith(pinned: !note.pinned));
+    final idx = _all.indexWhere((n) => n.id == note.id);
+    if (idx == -1) return;
+
+    _all[idx] = note.copyWith(pinned: !note.pinned);
+    _all.sort(_noteSort);
+    notifyListeners();
+    await _repo.save(_all);
   }
 
-  /// time == null => reminder kaldır
-  Future<void> setReminder(Note note, DateTime? time) async {
-    // Önce varsa iptal
-    await NotificationService.instance.cancelNoteReminder(note.id);
-
-    // Yeni reminder kurulacaksa schedule et
-    if (time != null) {
-      await NotificationService.instance.scheduleNoteReminder(
-        noteId: note.id,
-        title: 'Baby Tracker',
-        body: note.text,
-        when: time,
-      );
+  /// Swipe ile silince çağır: (removedNote, originalIndex) döner
+  Future<(Note removed, int index)> removeForUndo(String noteId) async {
+    final idx = _all.indexWhere((n) => n.id == noteId);
+    if (idx == -1) {
+      throw StateError('Note not found: $noteId');
     }
+    final removed = _all.removeAt(idx);
+    notifyListeners();
+    await _repo.save(_all);
+    return (removed, idx);
+  }
 
-    // Modelde reminder state’i güncelle
-    await update(
-      note.copyWith(
-        reminderAt: time,
-        notificationId: null, // artık kullanılmıyor
-      ),
-    );
+  Future<void> undoRemove(Note note, int index) async {
+    final safeIndex = index.clamp(0, _all.length);
+    _all.insert(safeIndex, note);
+    _all.sort(_noteSort);
+    notifyListeners();
+    await _repo.save(_all);
+  }
+
+  Future<void> delete(String noteId) async {
+    _all.removeWhere((n) => n.id == noteId);
+    notifyListeners();
+    await _repo.save(_all);
+  }
+
+  Future<void> clearAll() async {
+    _all.clear();
+    notifyListeners();
+    await _repo.clear();
+  }
+
+  int _noteSort(Note a, Note b) {
+    // 1) pinned üstte
+    if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
+    // 2) yeni olan üstte
+    return b.createdAt.compareTo(a.createdAt);
+  }
+
+  // Hatırlatıcı fonksiyonların varsa şimdilik koruyorsun:
+  Future<void> setReminder(Note note, DateTime? when) async {
+    final idx = _all.indexWhere((n) => n.id == note.id);
+    if (idx == -1) return;
+
+    _all[idx] = note.copyWith(reminderAt: when);
+    _all.sort(_noteSort);
+    notifyListeners();
+    await _repo.save(_all);
   }
 }

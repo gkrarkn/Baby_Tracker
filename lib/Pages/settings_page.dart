@@ -1,338 +1,281 @@
 import 'package:flutter/material.dart';
-
-import '../core/app_globals.dart'; // appThemeColor (ValueNotifier<Color>)
-import '../theme/theme_controller.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'privacy_policy_webview_page.dart';
 
-class SettingsPage extends StatelessWidget {
+import '../core/app_globals.dart';
+import '../theme/theme_controller.dart';
+
+class SettingsPage extends StatefulWidget {
   final ThemeController themeController;
   const SettingsPage({super.key, required this.themeController});
 
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final mainColor = appThemeColor.value;
+  State<SettingsPage> createState() => _SettingsPageState();
+}
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ayarlar'),
-        backgroundColor: mainColor,
-        foregroundColor: Colors.white,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        children: [
-          const _SectionTitle('Görünüm'),
-          _surfaceCard(
-            context,
-            child: Column(
-              children: [
-                _themeModeTile(
-                  context,
-                  icon: Icons.settings_suggest,
-                  title: 'Sistem',
-                  subtitle: 'Cihaz ayarlarını takip eder',
-                  value: ThemeMode.system,
-                ),
-                _divider(context),
-                _themeModeTile(
-                  context,
-                  icon: Icons.light_mode,
-                  title: 'Açık',
-                  subtitle: 'Her zaman açık tema',
-                  value: ThemeMode.light,
-                ),
-                _divider(context),
-                _themeModeTile(
-                  context,
-                  icon: Icons.dark_mode,
-                  title: 'Koyu',
-                  subtitle: 'Her zaman koyu tema',
-                  value: ThemeMode.dark,
-                ),
-              ],
-            ),
-          ),
+class _SettingsPageState extends State<SettingsPage> {
+  String _gender = 'none'; // none | boy | girl
 
-          const SizedBox(height: 16),
-          const _SectionTitle('Bebeğin Cinsiyeti / Tema Rengi'),
-          ValueListenableBuilder<Color>(
-            valueListenable: appThemeColor,
-            builder: (context, color, _) {
-              return _surfaceCard(
-                context,
-                child: Column(
-                  children: [
-                    _genderTile(
-                      context,
-                      title: 'Kız Bebek',
-                      icon: Icons.female,
-                      iconColor: Colors.pink.shade300,
-                      selected: color.value == Colors.pink.shade200.value,
-                      onTap: () => themeController.setGender('girl'),
-                    ),
-                    _divider(context),
-                    _genderTile(
-                      context,
-                      title: 'Erkek Bebek',
-                      icon: Icons.male,
-                      iconColor: Colors.blue,
-                      selected: color.value == Colors.blue.value,
-                      onTap: () => themeController.setGender('boy'),
-                    ),
-                    _divider(context),
-                    _genderTile(
-                      context,
-                      title: 'Varsayılan',
-                      icon: Icons.palette,
-                      iconColor: Colors.deepPurple,
-                      selected: color.value == Colors.deepPurple.value,
-                      onTap: () => themeController.setGender('none'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+  @override
+  void initState() {
+    super.initState();
+    _loadGender();
+  }
 
-          const SizedBox(height: 16),
-          const _SectionTitle('Gizlilik'),
-          _surfaceCard(
-            context,
-            child: Column(
-              children: [
-                _simpleTile(
-                  context,
-                  icon: Icons.privacy_tip_outlined,
-                  iconColor: cs.primary,
-                  title: 'Gizlilik Politikası',
-                  subtitle: 'Politikayı uygulama içinden görüntüleyin',
-                  onTap: () => _openPrivacyPolicy(context),
-                ),
-              ],
-            ),
-          ),
+  Future<void> _loadGender() async {
+    final prefs = await SharedPreferences.getInstance();
+    final g = prefs.getString('gender') ?? 'none';
+    if (!mounted) return;
+    setState(() => _gender = g);
+  }
 
-          const SizedBox(height: 16),
-          const _SectionTitle('Bilgilendirme'),
-          _surfaceCard(
-            context,
-            child: Column(
-              children: [
-                _simpleTile(
-                  context,
-                  icon: Icons.info_outline,
-                  iconColor: cs.primary,
-                  title: 'Bilgilendirme',
-                  subtitleWidget: _disclaimerSubtitle(context),
-                  onTap: () => _showDisclaimerDialog(context),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  Future<void> _setGender(String value) async {
+    setState(() => _gender = value);
+    await widget.themeController.setGender(value);
+  }
+
+  Future<void> _pickBirthDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: babyBirthDate.value ?? DateTime.now(),
+      firstDate: DateTime(2015),
+      lastDate: DateTime.now(),
+      locale: const Locale('tr', 'TR'),
+    );
+    if (picked == null) return;
+    await setBabyBirthDate(picked);
+  }
+
+  Future<void> _pickDueDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: babyDueDate.value ?? babyBirthDate.value ?? DateTime.now(),
+      firstDate: DateTime(2015),
+      lastDate: DateTime.now().add(const Duration(days: 730)),
+      locale: const Locale('tr', 'TR'),
+    );
+    if (picked == null) return;
+    await setBabyDueDate(picked);
+  }
+
+  void _showDueDateInfo() {
+    _showInfoDialog(
+      title: 'Beklenen Doğum Tarihi (opsiyonel)',
+      content:
+          'Erken doğan bebeklerde gelişim dönemleri doğum tarihine göre sapabilir. '
+          'Beklenen doğum tarihini girerseniz atak haftası hesaplamaları '
+          '“düzeltilmiş yaş” mantığıyla yapılır.',
     );
   }
 
-  // ---------------- Actions ----------------
-
-  void _openPrivacyPolicy(BuildContext context) {
-    final lang = Localizations.localeOf(context).languageCode.toLowerCase();
-
-    // GitHub Pages (çalışan link)
-    const trUrl =
-        'https://gkrarkn.github.io/Baby_Tracker/privacy-policy-tr.html';
-    const enUrl =
-        'https://gkrarkn.github.io/Baby_Tracker/privacy-policy-en.html';
-
-    final url = (lang == 'tr') ? trUrl : enUrl;
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => PrivacyPolicyWebViewPage(
-          url: url,
-          title: (lang == 'tr') ? 'Gizlilik Politikası' : 'Privacy Policy',
-        ),
-      ),
+  void _showMedicalDisclaimer() {
+    _showInfoDialog(
+      title: 'Bilgilendirme',
+      content:
+          'Bu uygulamada yer alan bilgiler yalnızca genel bilgilendirme '
+          'amaçlıdır ve tıbbi tavsiye niteliği taşımaz.\n\n'
+          'Tanı ve tedavi için mutlaka doktorunuza danışınız.',
     );
   }
 
-  static void _showDisclaimerDialog(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
+  void _showInfoDialog({required String title, required String content}) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: cs.surface,
-        title: Text('Bilgilendirme', style: TextStyle(color: cs.onSurface)),
-        content: Text(
-          'Uygulama içeriği bilgilendirme amaçlıdır; tıbbi tanı veya tedavi önerisi değildir.\n\n'
-          'Bebeğinizle ilgili ilaç/uyku/beslenme gibi konularda nihai kararları çocuk doktorunuzla değerlendiriniz.',
-          style: TextStyle(color: cs.onSurfaceVariant),
-        ),
+        title: Text(title),
+        content: Text(content),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Kapat'),
+            child: const Text('Anladım'),
           ),
         ],
       ),
     );
   }
-
-  // ---------------- UI helpers ----------------
-
-  static Widget _disclaimerSubtitle(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return RichText(
-      text: TextSpan(
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-        children: [
-          const TextSpan(text: 'Uygulama tıbbi tavsiye yerine geçmez'),
-          TextSpan(
-            text: ' • Devamını oku',
-            style: TextStyle(fontWeight: FontWeight.w700, color: cs.primary),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _themeModeTile(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required ThemeMode value,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-
-    return RadioListTile<ThemeMode>(
-      value: value,
-      groupValue: themeController.mode,
-      onChanged: (v) {
-        if (v == null) return;
-        themeController.setThemeMode(v);
-      },
-      activeColor: cs.primary,
-      title: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface),
-      ),
-      subtitle: Text(subtitle, style: TextStyle(color: cs.onSurfaceVariant)),
-      secondary: CircleAvatar(
-        backgroundColor: cs.primary.withValues(alpha: 0.12),
-        child: Icon(icon, color: cs.primary),
-      ),
-    );
-  }
-
-  static Widget _genderTile(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color iconColor,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cs.primary.withValues(alpha: 0.12),
-        child: Icon(icon, color: iconColor),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface),
-      ),
-      trailing: selected
-          ? const Icon(Icons.check, color: Colors.green)
-          : const SizedBox.shrink(),
-      onTap: onTap,
-    );
-  }
-
-  static Widget _simpleTile(
-    BuildContext context, {
-    required IconData icon,
-    required Color iconColor,
-    required String title,
-    String? subtitle,
-    Widget? subtitleWidget,
-    required VoidCallback onTap,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: cs.primary.withValues(alpha: 0.12),
-        child: Icon(icon, color: iconColor),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.w700, color: cs.onSurface),
-      ),
-      subtitle:
-          subtitleWidget ??
-          (subtitle == null
-              ? null
-              : Text(subtitle, style: TextStyle(color: cs.onSurfaceVariant))),
-      trailing: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-      onTap: onTap,
-    );
-  }
-
-  static Widget _surfaceCard(BuildContext context, {required Widget child}) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.40)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-
-  static Widget _divider(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Divider(
-      height: 1,
-      thickness: 1,
-      color: cs.outlineVariant.withValues(alpha: 0.30),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(left: 2, bottom: 8),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: cs.onSurface.withValues(alpha: 0.90),
-        ),
-      ),
+    return ValueListenableBuilder<Color>(
+      valueListenable: appThemeColor,
+      builder: (_, mainColor, __) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Ayarlar')),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+            children: [
+              _section('Profil'),
+              _genderCard(mainColor),
+
+              _section('Bebek Bilgileri'),
+              _datesCard(mainColor),
+
+              _section('Görünüm'),
+              _themeModeCard(mainColor),
+
+              _section('Gizlilik'),
+              _privacySwitch(mainColor),
+              const SizedBox(height: 8),
+              _infoTile(
+                icon: Icons.info_outline_rounded,
+                text: 'Bilgilendirme',
+                onTap: _showMedicalDisclaimer,
+              ),
+              const SizedBox(height: 8),
+              _infoTile(
+                icon: Icons.description_outlined,
+                text: 'Gizlilik Politikası',
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const PrivacyPolicyWebViewPage(
+                        title: 'Gizlilik Politikası',
+                        assetPath: 'assets/privacy-policy-tr.html',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
+
+  // ---------- UI PARTS ----------
+
+  Widget _section(String t) => Padding(
+    padding: const EdgeInsets.only(top: 12, bottom: 6),
+    child: Text(
+      t,
+      style: Theme.of(
+        context,
+      ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+    ),
+  );
+
+  Widget _genderCard(Color c) => _card(
+    child: Wrap(
+      spacing: 10,
+      children: [
+        _chip('Belirtilmedi', 'none', c),
+        _chip('Erkek', 'boy', c),
+        _chip('Kız', 'girl', c),
+      ],
+    ),
+  );
+
+  Widget _chip(String t, String v, Color c) => ChoiceChip(
+    label: Text(t),
+    selected: _gender == v,
+    onSelected: (_) => _setGender(v),
+    selectedColor: c.withValues(alpha: 0.15),
+  );
+
+  Widget _datesCard(Color c) => _card(
+    child: Column(
+      children: [
+        _dateTile(
+          icon: Icons.cake_rounded,
+          title: 'Doğum tarihi',
+          date: babyBirthDate,
+          onTap: _pickBirthDate,
+        ),
+        const Divider(),
+        _dateTile(
+          icon: Icons.event_available_rounded,
+          title: 'Beklenen doğum tarihi',
+          date: babyDueDate,
+          onTap: _pickDueDate,
+          infoTap: _showDueDateInfo,
+        ),
+      ],
+    ),
+  );
+
+  Widget _dateTile({
+    required IconData icon,
+    required String title,
+    required ValueNotifier<DateTime?> date,
+    required VoidCallback onTap,
+    VoidCallback? infoTap,
+  }) => ValueListenableBuilder<DateTime?>(
+    valueListenable: date,
+    builder: (_, d, __) {
+      return ListTile(
+        leading: Icon(icon),
+        title: Row(
+          children: [
+            Text(title),
+            if (infoTap != null) ...[
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: infoTap,
+                child: const Icon(Icons.info_outline_rounded, size: 18),
+              ),
+            ],
+          ],
+        ),
+        subtitle: Text(d == null ? 'Opsiyonel' : formatDateTr(d)),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: onTap,
+      );
+    },
+  );
+
+  Widget _themeModeCard(Color c) => _card(
+    child: Wrap(
+      spacing: 10,
+      children: ThemeMode.values.map((m) {
+        final label = switch (m) {
+          ThemeMode.system => 'Sistem',
+          ThemeMode.light => 'Açık',
+          ThemeMode.dark => 'Koyu',
+        };
+        return ChoiceChip(
+          label: Text(label),
+          selected: widget.themeController.mode == m,
+          onSelected: (_) => widget.themeController.setThemeMode(m),
+          selectedColor: c.withValues(alpha: 0.15),
+        );
+      }).toList(),
+    ),
+  );
+
+  Widget _privacySwitch(Color c) => _card(
+    child: ValueListenableBuilder<bool>(
+      valueListenable: anonDataOptIn,
+      builder: (_, v, __) {
+        return SwitchListTile(
+          secondary: Icon(Icons.privacy_tip_rounded, color: c),
+          title: const Text('Anonim kullanım verisi'),
+          subtitle: const Text(
+            'Uygulamayı iyileştirmek için anonim veri paylaşımı.',
+          ),
+          value: v,
+          onChanged: setAnonDataOptIn,
+        );
+      },
+    ),
+  );
+
+  Widget _infoTile({
+    required IconData icon,
+    required String text,
+    required VoidCallback onTap,
+  }) => _card(
+    child: ListTile(
+      leading: Icon(icon),
+      title: Text(text),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
+    ),
+  );
+
+  Widget _card({required Widget child}) => Card(
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    child: Padding(padding: const EdgeInsets.all(12), child: child),
+  );
 }

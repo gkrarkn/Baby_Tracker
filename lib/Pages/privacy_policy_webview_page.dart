@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 class PrivacyPolicyWebViewPage extends StatefulWidget {
-  final String url;
+  final String assetPath; // örn: assets/privacy-policy-tr.html
   final String title;
 
   const PrivacyPolicyWebViewPage({
     super.key,
-    required this.url,
+    required this.assetPath,
     required this.title,
   });
 
@@ -25,7 +25,7 @@ class _PrivacyPolicyWebViewPageState extends State<PrivacyPolicyWebViewPage> {
 
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..loadRequest(Uri.parse(widget.url));
+      ..loadFlutterAsset(widget.assetPath); // ✅ kritik nokta
   }
 
   @override

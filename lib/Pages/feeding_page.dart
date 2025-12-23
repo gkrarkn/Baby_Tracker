@@ -1,8 +1,10 @@
+// lib/pages/feeding_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:baby_tracker/core/app_globals.dart';
 import 'package:baby_tracker/recipes/widgets/recipes_section.dart';
+import '../ads/anchored_adaptive_banner.dart';
 
 class FeedingPage extends StatefulWidget {
   const FeedingPage({super.key});
@@ -12,22 +14,17 @@ class FeedingPage extends StatefulWidget {
 }
 
 class _FeedingPageState extends State<FeedingPage> {
-  // ---------- STATE ----------
   FeedingType _selectedType = FeedingType.formula;
 
-  // Bottle (Formula / Breast Milk)
   double _mlValue = 90;
 
-  // Solid food
   SolidUnit _foodUnit = SolidUnit.gr;
   late final TextEditingController _foodAmountController;
   late final TextEditingController _foodNoteController;
 
-  // Logs
   final List<String> _feedingLogs = [];
   static const String _prefsKey = 'feedingLogs';
 
-  // Premium (debug switch)
   bool _isPremium = false;
 
   @override
@@ -45,7 +42,6 @@ class _FeedingPageState extends State<FeedingPage> {
     super.dispose();
   }
 
-  // ---------- PERSISTENCE ----------
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
     final logs = prefs.getStringList(_prefsKey) ?? const <String>[];
@@ -69,7 +65,6 @@ class _FeedingPageState extends State<FeedingPage> {
     setState(_feedingLogs.clear);
   }
 
-  // ---------- SAVE ENTRY ----------
   void _saveFeeding() {
     final timestamp = getCurrentDateTime();
     final entry = _buildLogEntry(timestamp);
@@ -102,7 +97,6 @@ class _FeedingPageState extends State<FeedingPage> {
     }
   }
 
-  // ---------- TODAY SUMMARY ----------
   String _todayKey() {
     final now = DateTime.now();
     return "${now.day}.${now.month}.${now.year}";
@@ -189,7 +183,6 @@ class _FeedingPageState extends State<FeedingPage> {
     );
   }
 
-  // ---------- AGE-AWARE (temporary) ----------
   int _babyMonthsFromBirth(DateTime birthDate) {
     final now = DateTime.now();
     int months =
@@ -198,7 +191,6 @@ class _FeedingPageState extends State<FeedingPage> {
     return months < 0 ? 0 : months;
   }
 
-  // ---------- RECIPES CTA + SHEET ----------
   void _openRecipesSheet({required int babyMonths, required Color accent}) {
     showModalBottomSheet(
       context: context,
@@ -233,8 +225,6 @@ class _FeedingPageState extends State<FeedingPage> {
                   ],
                 ),
                 const SizedBox(height: 8),
-
-                // Asıl içerik: mevcut RecipesSection grid'i burada
                 Flexible(
                   child: SingleChildScrollView(
                     child: RecipesSection(
@@ -308,7 +298,6 @@ class _FeedingPageState extends State<FeedingPage> {
     );
   }
 
-  // ---------- PREMIUM (debug) ----------
   void _showPremiumSheet() {
     showModalBottomSheet(
       context: context,
@@ -352,7 +341,6 @@ class _FeedingPageState extends State<FeedingPage> {
     );
   }
 
-  // ---------- BUILD ----------
   @override
   Widget build(BuildContext context) {
     final mainColor = appThemeColor.value;
@@ -375,6 +363,7 @@ class _FeedingPageState extends State<FeedingPage> {
           ),
         ],
       ),
+      bottomNavigationBar: const AnchoredAdaptiveBanner(),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -384,7 +373,8 @@ class _FeedingPageState extends State<FeedingPage> {
                 16,
                 16,
                 16,
-                16 + MediaQuery.of(context).viewInsets.bottom,
+                // ✅ anchored banner için ekstra alt boşluk
+                96 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
@@ -395,9 +385,7 @@ class _FeedingPageState extends State<FeedingPage> {
                     const SizedBox(height: 12),
                     _buildTodaySummaryCard(Colors.orange),
                     const SizedBox(height: 16),
-
                     if (_selectedType == FeedingType.solid) ...[
-                      // HERO CTA (Tarifler ana ekranda grid değil, CTA olarak)
                       _buildRecipesCtaCard(
                         babyMonths: babyMonths,
                         accent: mainColor,
@@ -407,9 +395,7 @@ class _FeedingPageState extends State<FeedingPage> {
                     ] else ...[
                       _buildMlSelector(),
                     ],
-
                     const SizedBox(height: 16),
-
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -425,7 +411,6 @@ class _FeedingPageState extends State<FeedingPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 24),
                     const Align(
                       alignment: Alignment.centerLeft,
@@ -447,7 +432,6 @@ class _FeedingPageState extends State<FeedingPage> {
     );
   }
 
-  // ---------- UI PARTS ----------
   Widget _buildTypeSelector() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -586,7 +570,6 @@ class _FeedingPageState extends State<FeedingPage> {
   }
 }
 
-// ---------- SMALL TYPES ----------
 enum FeedingType { breastMilk, formula, solid }
 
 extension FeedingTypeX on FeedingType {

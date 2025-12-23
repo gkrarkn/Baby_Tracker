@@ -1,7 +1,8 @@
+// lib/notes/notes_page.dart
 import 'package:flutter/material.dart';
 
 import '../core/app_globals.dart';
-
+import '../ads/anchored_adaptive_banner.dart';
 import 'notes_controller.dart';
 import 'note_model.dart';
 import 'note_tile.dart';
@@ -34,9 +35,10 @@ class _NotesPageState extends State<NotesPage> {
         backgroundColor: mainColor,
         foregroundColor: Colors.white,
       ),
+      bottomNavigationBar: const AnchoredAdaptiveBanner(),
       floatingActionButton: FloatingActionButton(
         backgroundColor: mainColor,
-        onPressed: () => _openEditor(),
+        onPressed: _openEditor,
         child: const Icon(Icons.add),
       ),
       body: AnimatedBuilder(
@@ -49,16 +51,25 @@ class _NotesPageState extends State<NotesPage> {
                 child: _controller.notes.isEmpty
                     ? _emptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+                        // Banner üstüne binmemesi için extra bottom padding
+                        padding: const EdgeInsets.fromLTRB(12, 8, 12, 16 + 96),
                         itemCount: _controller.notes.length,
                         itemBuilder: (_, index) {
                           final Note note = _controller.notes[index];
-                          return NoteTile(
-                            note: note,
-                            onTap: () => _openEditor(note: note),
-                            onDelete: () => _controller.delete(note),
-                            onPin: () => _controller.togglePin(note),
-                            onReminder: () => _pickReminder(note),
+
+                          return Dismissible(
+                            key: ValueKey(note.id),
+                            direction: DismissDirection.endToStart,
+                            background: _dismissBg(),
+                            confirmDismiss: (_) => _confirmDelete(note),
+                            onDismissed: (_) => _deleteWithUndo(note),
+                            child: NoteTile(
+                              note: note,
+                              onTap: () => _openEditor(note: note),
+                              onDelete: () => _deleteWithUndo(note),
+                              onPin: () => _controller.togglePin(note),
+                              onReminder: () => _pickReminder(note),
+                            ),
                           );
                         },
                       ),
@@ -69,10 +80,6 @@ class _NotesPageState extends State<NotesPage> {
       ),
     );
   }
-
-  // ---------------------------
-  // UI Helpers
-  // ---------------------------
 
   Widget _searchBar() {
     return Padding(
@@ -101,9 +108,18 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  // ---------------------------
-  // Actions
-  // ---------------------------
+  Widget _dismissBg() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.centerRight,
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Icon(Icons.delete_outline, color: Colors.red),
+    );
+  }
 
   void _openEditor({Note? note}) {
     showModalBottomSheet(
@@ -116,6 +132,8 @@ class _NotesPageState extends State<NotesPage> {
         return NoteEditorSheet(
           note: note,
           onSave: (saved) {
+            if (saved.text.trim().isEmpty) return;
+
             if (note == null) {
               _controller.add(saved);
             } else {
@@ -130,5 +148,45 @@ class _NotesPageState extends State<NotesPage> {
   Future<void> _pickReminder(Note note) async {
     final picked = await showReminderPicker(context, note.reminderAt);
     await _controller.setReminder(note, picked);
+  }
+
+  Future<bool> _confirmDelete(Note note) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Silinsin mi?'),
+        content: const Text('Bu not silinecek.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sil'),
+          ),
+        ],
+      ),
+    );
+    return ok == true;
+  }
+
+  Future<void> _deleteWithUndo(Note note) async {
+    ScaffoldMessenger.of(context).clearSnackBars();
+
+    final (removed, index) = await _controller.removeForUndo(note.id);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Not silindi.'),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: 'GERİ AL',
+          onPressed: () => _controller.undoRemove(removed, index),
+        ),
+      ),
+    );
   }
 }

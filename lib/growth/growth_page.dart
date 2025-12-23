@@ -1,6 +1,8 @@
+// lib/growth/growth_page.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+import '../ads/anchored_adaptive_banner.dart';
 import 'growth_controller.dart';
 import 'growth_entry.dart';
 
@@ -43,9 +45,6 @@ class _GrowthPageState extends State<GrowthPage>
     super.dispose();
   }
 
-  // -------------------------
-  // Helpers
-  // -------------------------
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -90,9 +89,6 @@ class _GrowthPageState extends State<GrowthPage>
     return '${d.day} ${months[d.month - 1]} ${d.year}';
   }
 
-  // -------------------------
-  // Actions
-  // -------------------------
   Future<void> _save() async {
     final weightGr = _parseInt(_weightCtrl.text);
     final lengthCm = _parseDouble(_lengthCtrl.text);
@@ -160,12 +156,11 @@ class _GrowthPageState extends State<GrowthPage>
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
-    // En yeni en üstte
     final entries = _controller.entriesSorted;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Gelişim')),
+      bottomNavigationBar: const AnchoredAdaptiveBanner(),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -175,14 +170,14 @@ class _GrowthPageState extends State<GrowthPage>
           ),
         ),
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          // ✅ anchored banner varken alttan ekstra boşluk
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
             _surfaceCard(
               context,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Baş Çevresi sığmama fix: scrollable + padding azaltma + küçük font
                   TabBar(
                     controller: _tab,
                     isScrollable: true,
@@ -234,9 +229,7 @@ class _GrowthPageState extends State<GrowthPage>
                 ],
               ),
             ),
-
             const SizedBox(height: 14),
-
             _surfaceCard(
               context,
               child: Padding(
@@ -253,7 +246,6 @@ class _GrowthPageState extends State<GrowthPage>
                       ),
                     ),
                     const SizedBox(height: 12),
-
                     _fieldRow(
                       context,
                       label: 'Kilo (g)',
@@ -264,9 +256,7 @@ class _GrowthPageState extends State<GrowthPage>
                         icon: const Icon(Icons.calendar_month),
                       ),
                     ),
-
                     const SizedBox(height: 12),
-
                     _fieldRow(
                       context,
                       label: 'Boy (cm)',
@@ -274,9 +264,7 @@ class _GrowthPageState extends State<GrowthPage>
                       controller: _lengthCtrl,
                       trailing: const SizedBox(width: 40),
                     ),
-
                     const SizedBox(height: 12),
-
                     _fieldRow(
                       context,
                       label: 'Baş çevresi (cm)',
@@ -284,17 +272,13 @@ class _GrowthPageState extends State<GrowthPage>
                       controller: _headCtrl,
                       trailing: const SizedBox(width: 40),
                     ),
-
                     const SizedBox(height: 12),
-
                     Text(
                       _prettyDate(_selectedDate),
                       style: TextStyle(color: cs.onSurfaceVariant),
                       textAlign: TextAlign.right,
                     ),
-
                     const SizedBox(height: 12),
-
                     FilledButton(
                       onPressed: _save,
                       child: const Padding(
@@ -306,9 +290,7 @@ class _GrowthPageState extends State<GrowthPage>
                 ),
               ),
             ),
-
             const SizedBox(height: 14),
-
             Text(
               'Geçmiş Ölçümler',
               style: TextStyle(
@@ -318,7 +300,6 @@ class _GrowthPageState extends State<GrowthPage>
               ),
             ),
             const SizedBox(height: 10),
-
             if (entries.isEmpty)
               Text(
                 'Henüz kayıt yok.',
@@ -332,9 +313,6 @@ class _GrowthPageState extends State<GrowthPage>
     );
   }
 
-  // -------------------------
-  // Widgets
-  // -------------------------
   Widget _fieldRow(
     BuildContext context, {
     required String label,
@@ -380,15 +358,10 @@ class _GrowthPageState extends State<GrowthPage>
     final cs = Theme.of(context).colorScheme;
 
     final parts = <String>[];
-    if (e.weightKg != null) {
-      parts.add('${e.weightKg!.toStringAsFixed(2)} kg');
-    }
-    if (e.lengthCm != null) {
+    if (e.weightKg != null) parts.add('${e.weightKg!.toStringAsFixed(2)} kg');
+    if (e.lengthCm != null)
       parts.add('${e.lengthCm!.toStringAsFixed(1)} cm boy');
-    }
-    if (e.headCm != null) {
-      parts.add('${e.headCm!.toStringAsFixed(1)} cm baş');
-    }
+    if (e.headCm != null) parts.add('${e.headCm!.toStringAsFixed(1)} cm baş');
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -424,7 +397,6 @@ class _GrowthPageState extends State<GrowthPage>
   }) {
     final cs = Theme.of(context).colorScheme;
 
-    // Sadece değeri olanları al
     final filtered = <GrowthEntry>[];
     for (final e in entries) {
       final v = selector(e);
@@ -432,7 +404,6 @@ class _GrowthPageState extends State<GrowthPage>
       filtered.add(e);
     }
 
-    // Grafikte kronolojik çizmek daha okunur: oldest -> newest
     filtered.sort((a, b) => a.date.compareTo(b.date));
 
     final points = <FlSpot>[];
@@ -465,7 +436,7 @@ class _GrowthPageState extends State<GrowthPage>
               showTitles: true,
               reservedSize: 42,
               getTitlesWidget: (value, meta) => Text(
-                value.toStringAsFixed(unit == 'kg' ? 1 : 1),
+                value.toStringAsFixed(1),
                 style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
               ),
             ),

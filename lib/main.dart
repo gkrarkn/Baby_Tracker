@@ -1,6 +1,8 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'core/app_globals.dart';
 import 'core/notification_service.dart';
@@ -9,6 +11,22 @@ import 'theme/theme_controller.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // ✅ Hydrate globals (anon opt-in + baby dates)
+  await loadAppGlobals();
+
+  // ✅ Optional: theme seed based on saved gender (kept as in your current flow)
+  final prefs = await SharedPreferences.getInstance();
+  final savedGender = prefs.getString('gender');
+  if (savedGender == 'girl') {
+    appThemeColor.value = Colors.pink.shade200;
+  } else if (savedGender == 'boy') {
+    appThemeColor.value = Colors.blue;
+  } else {
+    // fallback
+    appThemeColor.value = appThemeColor.value; // keep current
+  }
+
   await MobileAds.instance.initialize();
   await NotificationService.instance.init();
 
@@ -83,13 +101,9 @@ class _BabyTrackerAppState extends State<BabyTrackerApp> {
             return MaterialApp(
               debugShowCheckedModeBanner: false,
               title: 'Bebek Takip',
-
-              // Tema
               theme: lightTheme,
               darkTheme: darkTheme,
               themeMode: _themeController.mode,
-
-              // TR dil / DatePicker vb.
               locale: const Locale('tr', 'TR'),
               supportedLocales: const [Locale('tr', 'TR')],
               localizationsDelegates: const [
@@ -97,7 +111,6 @@ class _BabyTrackerAppState extends State<BabyTrackerApp> {
                 GlobalWidgetsLocalizations.delegate,
                 GlobalCupertinoLocalizations.delegate,
               ],
-
               home: DashboardPage(themeController: _themeController),
             );
           },

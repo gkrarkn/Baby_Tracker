@@ -1,10 +1,10 @@
 // lib/pages/lullaby_page.dart
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 
 import '../core/app_globals.dart';
+import '../ads/anchored_adaptive_banner.dart';
 
 class LullabyPage extends StatefulWidget {
   const LullabyPage({super.key});
@@ -19,7 +19,6 @@ class _LullabyPageState extends State<LullabyPage> {
   String? _currentFile;
   bool _isPlaying = false;
 
-  // Sleep mode + timer
   bool _sleepMode = false;
   Timer? _sleepTimer;
   Duration? _remaining;
@@ -27,53 +26,38 @@ class _LullabyPageState extends State<LullabyPage> {
   final List<_LullabyTrack> _tracks = const [
     _LullabyTrack(
       title: 'Beyaz Gürültü',
-      assetFile: 'white_noise.mp3',
+      assetFile: 'white_noise.ogg',
       icon: Icons.graphic_eq_rounded,
       bgColor: Color(0xFFE3F2FD),
       iconColor: Color(0xFF1E88E5),
     ),
     _LullabyTrack(
       title: 'Yağmur Sesi',
-      assetFile: 'rain.mp3',
+      assetFile: 'rain.ogg',
       icon: Icons.water_drop_rounded,
       bgColor: Color(0xFFE1F5FE),
       iconColor: Color(0xFF039BE5),
     ),
     _LullabyTrack(
       title: 'Klasik Ninni',
-      assetFile: 'brahms_lullaby.mp3',
+      assetFile: 'brahms_lullaby.ogg',
       icon: Icons.music_note_rounded,
       bgColor: Color(0xFFEDE7F6),
       iconColor: Color(0xFF7E57C2),
     ),
     _LullabyTrack(
       title: 'Süpürge Sesi',
-      assetFile: 'vacuum.mp3',
+      assetFile: 'vacuum.ogg',
       icon: Icons.cleaning_services_rounded,
       bgColor: Color(0xFFE0F2F1),
       iconColor: Color(0xFF26A69A),
     ),
     _LullabyTrack(
-      title: 'Saç Kurutma Sesi',
-      assetFile: 'hair_dryer.mp3',
-      // ✅ air_rounded ile aynı hissi vermesin diye fan ikonuna geçtik
-      icon: Icons.mode_fan_off_rounded,
-      bgColor: Color(0xFFE0F7FA),
-      iconColor: Color(0xFF00ACC1),
-    ),
-    _LullabyTrack(
       title: 'Şömine Sesi',
-      assetFile: 'fireplace.mp3',
+      assetFile: 'fireplace.ogg',
       icon: Icons.local_fire_department_rounded,
       bgColor: Color(0xFFFFE0B2),
       iconColor: Color(0xFFEF6C00),
-    ),
-    _LullabyTrack(
-      title: 'Kalp Atışı (Hafif)',
-      assetFile: 'heartbeat_soft.mp3',
-      icon: Icons.favorite_rounded,
-      bgColor: Color(0xFFFCE4EC),
-      iconColor: Color(0xFFD81B60),
     ),
   ];
 
@@ -90,8 +74,6 @@ class _LullabyPageState extends State<LullabyPage> {
     _player.dispose();
     super.dispose();
   }
-
-  // -------------------- AUDIO --------------------
 
   Future<void> _togglePlay(_LullabyTrack track) async {
     final sameTrack = _currentFile == track.assetFile;
@@ -122,15 +104,11 @@ class _LullabyPageState extends State<LullabyPage> {
     });
   }
 
-  // -------------------- TIMER --------------------
-
   String get _timerLabel {
     final r = _remaining;
     if (r == null) return 'Kapalı';
-
     final mm = r.inMinutes;
     final ss = r.inSeconds % 60;
-
     if (mm > 0) return '${mm}dk';
     return '${ss}s';
   }
@@ -167,11 +145,9 @@ class _LullabyPageState extends State<LullabyPage> {
     });
   }
 
-  // -------------------- UI --------------------
-
   @override
   Widget build(BuildContext context) {
-    final Color mainColor = appThemeColor.value;
+    final mainColor = appThemeColor.value;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
@@ -205,7 +181,7 @@ class _LullabyPageState extends State<LullabyPage> {
                   const SizedBox(width: 6),
                   Text(
                     _timerLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ],
               ),
@@ -213,17 +189,17 @@ class _LullabyPageState extends State<LullabyPage> {
           ),
         ],
       ),
+      bottomNavigationBar: const AnchoredAdaptiveBanner(),
       body: Stack(
         children: [
           ListView.separated(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 96),
             itemCount: _tracks.length,
             separatorBuilder: (_, __) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final track = _tracks[index];
               final isActive = _currentFile == track.assetFile && _isPlaying;
 
-              // Active highlight
               final activeBg = Color.alphaBlend(
                 mainColor.withValues(alpha: 0.10),
                 Theme.of(context).cardColor,
@@ -262,7 +238,6 @@ class _LullabyPageState extends State<LullabyPage> {
                       ),
                       child: Row(
                         children: [
-                          // Icon bubble + pulse when active
                           _IconBubble(
                             icon: track.icon,
                             bgColor: track.bgColor,
@@ -274,7 +249,7 @@ class _LullabyPageState extends State<LullabyPage> {
                             child: Text(
                               track.title,
                               style: const TextStyle(
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w800,
                                 fontSize: 16,
                               ),
                             ),
@@ -293,8 +268,6 @@ class _LullabyPageState extends State<LullabyPage> {
               );
             },
           ),
-
-          // Sleep mode overlay (karartma)
           if (_sleepMode)
             IgnorePointer(
               child: Container(color: Colors.black.withValues(alpha: 0.55)),
@@ -308,7 +281,6 @@ class _LullabyPageState extends State<LullabyPage> {
 class _LullabyTrack {
   final String title;
   final String assetFile;
-
   final IconData icon;
   final Color bgColor;
   final Color iconColor;
@@ -322,7 +294,6 @@ class _LullabyTrack {
   });
 }
 
-/// Active iken hafif pulse animasyonu
 class _IconBubble extends StatefulWidget {
   final IconData icon;
   final Color bgColor;
@@ -364,13 +335,12 @@ class _IconBubbleState extends State<_IconBubble>
   @override
   void didUpdateWidget(covariant _IconBubble oldWidget) {
     super.didUpdateWidget(oldWidget);
-
     if (oldWidget.isActive != widget.isActive) {
       if (widget.isActive) {
         _c.repeat(reverse: true);
       } else {
         _c.stop();
-        _c.value = 0; // reset
+        _c.value = 0;
       }
     }
   }

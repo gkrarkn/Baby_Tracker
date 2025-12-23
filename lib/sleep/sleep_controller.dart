@@ -1,5 +1,6 @@
 // lib/sleep/sleep_controller.dart
 import 'package:flutter/foundation.dart';
+import '../core/analytics_service.dart';
 
 import 'sleep_entry.dart';
 import 'sleep_repository.dart';
@@ -37,13 +38,22 @@ class SleepController extends ChangeNotifier {
   }
 
   Future<void> toggleSleep() async {
+    // START (awake -> sleeping)
     if (_currentStart == null) {
       _currentStart = DateTime.now();
       notifyListeners();
+
+      // 🔹 analytics: start
+      await AnalyticsService.instance.log(
+        'sleep_toggle',
+        params: {'action': 'start'},
+      );
+
       await _repo.saveCurrentStart(_currentStart);
       return;
     }
 
+    // STOP (sleeping -> awake + entry)
     final now = DateTime.now();
     final start = _currentStart!;
     if (now.isBefore(start)) {
@@ -76,8 +86,23 @@ class SleepController extends ChangeNotifier {
 
     _currentStart = null;
     _entries.insert(0, entry);
-    _entries.sort((a, b) => b.start.compareTo(a.start)); // newest first
+    _entries.sort((a, b) => b.start.compareTo(a.start));
     notifyListeners();
+
+    // 🔹 analytics: stop
+    await AnalyticsService.instance.log(
+      'sleep_toggle',
+      params: {'action': 'stop'},
+    );
+
+    // 🔹 analytics: only if >= 1 min
+    final min = entry.duration.inMinutes;
+    if (min >= 1) {
+      await AnalyticsService.instance.log(
+        'sleep_entry_added',
+        params: {'duration_min': min},
+      );
+    }
 
     await _repo.saveEntries(_entries);
     await _repo.saveCurrentStart(null);

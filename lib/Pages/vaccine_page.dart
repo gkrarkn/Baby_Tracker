@@ -1,3 +1,4 @@
+// lib/pages/vaccine_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,22 +12,39 @@ class VaccinePage extends StatefulWidget {
 }
 
 class _VaccinePageState extends State<VaccinePage> {
-  String _selectedType = "Aşı";
+  // -----------------------------
+  // Keys / constants
+  // -----------------------------
+  static const String _kLogsKey = 'healthLogs';
+  static const String _kTypeVaccine = 'Aşı';
+  static const String _kTypeMed = 'İlaç/Vitamin';
+
+  static const String _tagVaccine = '💉 '; // MUST end with space
+  static const String _tagMed = '💊 '; // MUST end with space
+
+  // -----------------------------
+  // State
+  // -----------------------------
+  String _selectedType = _kTypeVaccine;
   String? _selectedVaccine;
   final TextEditingController _medicineController = TextEditingController();
-  List<String> vaccineLogs = [];
 
-  final List<String> _mandatoryVaccines = [
+  List<String> _logs = []; // stored as: "<TAG><TITLE>|<timestamp>"
+
+  // -----------------------------
+  // Data sources
+  // -----------------------------
+  final List<String> _mandatoryVaccines = const [
     'Hepatit A',
     'Hepatit B',
     'BCG (Verem)',
-    '5\'li Karma',
+    "5'li Karma",
     'KPA (Zatürre)',
     'KKK (Kızamık)',
     'Su Çiçeği',
   ];
 
-  final List<String> _optionalVaccines = [
+  final List<String> _optionalVaccines = const [
     'Rota (Rotavirüs)',
     'Menenjit B',
     'Menenjit ACWY',
@@ -35,14 +53,14 @@ class _VaccinePageState extends State<VaccinePage> {
     'HPV',
   ];
 
-  final Map<String, String> _vaccineInfo = {
+  final Map<String, String> _vaccineInfo = const {
     'Hepatit A':
         'Rutin çocukluk aşı programında yer alan bir aşıdır. Kesin zamanlama için çocuk doktorunuza göre planlayınız.',
     'Hepatit B':
         'Doğumdan itibaren uygulanan temel aşılar arasındadır. Kesin zamanlama için çocuk doktorunuzla birlikte değerlendirme yapın.',
     'BCG (Verem)':
         'Verem hastalığına karşı koruma sağlar. Genellikle erken dönemde uygulanır. Kesin uygulama zamanını çocuk doktorunuz belirlemelidir.',
-    '5\'li Karma':
+    "5'li Karma":
         'Difteri, tetanoz, boğmaca, polio ve Hib’e karşı koruma sağlar. Rutin aşılardandır. Doz aralıkları için doktorunuza danışın.',
     'KPA (Zatürre)':
         'Pnömokok enfeksiyonlarına karşı koruyucu bir aşıdır. Rutin çocukluk aşı takviminde yer alır. Kesin zamanlama doktor kontrolünde planlanmalıdır.',
@@ -64,6 +82,9 @@ class _VaccinePageState extends State<VaccinePage> {
         'Human Papilloma Virus’a karşı korur. Ergenlik dönemi için önerilen bir aşıdır. Uygun yaş ve doz planlaması için çocuk doktorunuza danışınız.',
   };
 
+  // -----------------------------
+  // Lifecycle
+  // -----------------------------
   @override
   void initState() {
     super.initState();
@@ -76,35 +97,62 @@ class _VaccinePageState extends State<VaccinePage> {
     super.dispose();
   }
 
+  // -----------------------------
+  // Persistence
+  // -----------------------------
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
-    setState(() => vaccineLogs = prefs.getStringList('vaccineLogs') ?? []);
+    final loaded = prefs.getStringList(_kLogsKey) ?? [];
+    if (!mounted) return;
+    setState(() => _logs = loaded);
   }
 
   Future<void> _saveLogs() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList('vaccineLogs', vaccineLogs);
+    await prefs.setStringList(_kLogsKey, _logs);
   }
 
+  // -----------------------------
+  // Derived
+  // -----------------------------
+  bool get _isVaccineMode => _selectedType == _kTypeVaccine;
+
+  List<String> get _filteredLogs {
+    if (_logs.isEmpty) return const [];
+    final prefix = _isVaccineMode ? _tagVaccine : _tagMed;
+    return _logs.where((e) => e.startsWith(prefix)).toList();
+  }
+
+  // -----------------------------
+  // Actions
+  // -----------------------------
   void _saveEntry() {
-    String entry = "";
     final timeStamp = getCurrentDateTime();
 
-    if (_selectedType == "Aşı") {
-      if (_selectedVaccine == null) return;
-      entry = "💉 $_selectedVaccine|$timeStamp";
-    } else {
-      final text = _medicineController.text.trim();
-      if (text.isEmpty) return;
-      entry = "💊 $text|$timeStamp";
-      _medicineController.clear();
+    if (_isVaccineMode) {
+      if (_selectedVaccine == null) {
+        _toast('Lütfen aşı seçin.');
+        return;
+      }
+      final entry = '$_tagVaccine$_selectedVaccine|$timeStamp';
+      setState(() => _logs.insert(0, entry));
+      _saveLogs();
+      return;
     }
 
-    setState(() => vaccineLogs.insert(0, entry));
+    final text = _medicineController.text.trim();
+    if (text.isEmpty) {
+      _toast('Lütfen ilaç/vitamin adını yazın.');
+      return;
+    }
+
+    final entry = '$_tagMed$text|$timeStamp';
+    setState(() => _logs.insert(0, entry));
+    _medicineController.clear();
     _saveLogs();
   }
 
-  Future<void> _clearLogs() async {
+  Future<void> _clearAllLogs() async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -115,7 +163,7 @@ class _VaccinePageState extends State<VaccinePage> {
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Vazgeç'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Sil'),
           ),
@@ -125,14 +173,17 @@ class _VaccinePageState extends State<VaccinePage> {
     if (ok != true) return;
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('vaccineLogs');
-    setState(() => vaccineLogs.clear());
+    await prefs.remove(_kLogsKey);
+
+    if (!mounted) return;
+    setState(() => _logs.clear());
   }
 
-  void _deleteLogWithUndo(int index) {
-    final removed = vaccineLogs[index];
+  void _deleteLogWithUndoByValue(String value) {
+    final removeIndex = _logs.indexOf(value);
+    if (removeIndex < 0) return;
 
-    setState(() => vaccineLogs.removeAt(index));
+    setState(() => _logs.removeAt(removeIndex));
     _saveLogs();
 
     ScaffoldMessenger.of(context).clearSnackBars();
@@ -142,7 +193,7 @@ class _VaccinePageState extends State<VaccinePage> {
         action: SnackBarAction(
           label: 'Geri al',
           onPressed: () {
-            setState(() => vaccineLogs.insert(index, removed));
+            setState(() => _logs.insert(removeIndex, value));
             _saveLogs();
           },
         ),
@@ -150,6 +201,22 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
+  void _toast(String msg) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  void _switchType(String type) {
+    setState(() {
+      _selectedType = type;
+      _selectedVaccine = null;
+      // medicine text stays (user-friendly)
+    });
+  }
+
+  // -----------------------------
+  // UI
+  // -----------------------------
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -160,14 +227,14 @@ class _VaccinePageState extends State<VaccinePage> {
         return Scaffold(
           backgroundColor: cs.surface,
           appBar: AppBar(
-            title: const Text("Sağlık Takibi 🏥"),
+            title: const Text('Sağlık Takibi 🏥'),
             backgroundColor: mainColor,
             foregroundColor: Colors.white,
             actions: [
               IconButton(
-                onPressed: _clearLogs,
+                onPressed: _clearAllLogs,
                 icon: const Icon(Icons.delete_outline),
-                tooltip: "Tüm kayıtları sil",
+                tooltip: 'Tüm kayıtları sil',
               ),
             ],
           ),
@@ -184,35 +251,30 @@ class _VaccinePageState extends State<VaccinePage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
                 children: [
-                  _typeSelector(context, mainColor),
+                  _typeSelector(mainColor),
                   const SizedBox(height: 14),
 
-                  if (_selectedType == "Aşı")
-                    Column(
-                      children: [
-                        _surfaceCard(
-                          context,
-                          child: Padding(
-                            padding: const EdgeInsets.all(14),
-                            child: Column(
-                              children: [
-                                _buildVaccineDropdown(mainColor),
-                                _buildVaccineInfoCard(mainColor),
-                              ],
-                            ),
-                          ),
+                  if (_isVaccineMode)
+                    _surfaceCard(
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            _vaccineDropdown(mainColor),
+                            _vaccineInfoCard(mainColor),
+                          ],
                         ),
-                      ],
+                      ),
                     )
                   else
                     _surfaceCard(
-                      context,
                       child: Padding(
                         padding: const EdgeInsets.all(14),
                         child: TextField(
                           controller: _medicineController,
+                          textInputAction: TextInputAction.done,
                           decoration: InputDecoration(
-                            hintText: "İlaç veya vitamin adı yaz...",
+                            hintText: 'İlaç veya vitamin adı yaz...',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(14),
                             ),
@@ -223,7 +285,6 @@ class _VaccinePageState extends State<VaccinePage> {
                     ),
 
                   const SizedBox(height: 12),
-
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton(
@@ -237,7 +298,7 @@ class _VaccinePageState extends State<VaccinePage> {
                         ),
                       ),
                       child: const Text(
-                        "KAYDET",
+                        'KAYDET',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -247,19 +308,19 @@ class _VaccinePageState extends State<VaccinePage> {
                   ),
 
                   const SizedBox(height: 18),
-                  _sectionTitle(context, "Geçmiş İşlemler"),
+                  _sectionTitle('Geçmiş İşlemler'),
                   const SizedBox(height: 10),
 
-                  if (vaccineLogs.isEmpty)
-                    _emptyState(context)
+                  if (_filteredLogs.isEmpty)
+                    _emptyStateForType()
                   else
-                    ...List.generate(vaccineLogs.length, (index) {
-                      final parts = vaccineLogs[index].split('|');
-                      final title = parts[0];
-                      final date = parts.length > 1 ? parts[1] : "";
+                    ..._filteredLogs.map((value) {
+                      final parts = value.split('|');
+                      final title = parts.isNotEmpty ? parts[0] : value;
+                      final date = parts.length > 1 ? parts[1] : '';
 
                       return Dismissible(
-                        key: ValueKey('${vaccineLogs[index]}_$index'),
+                        key: ValueKey(value),
                         direction: DismissDirection.endToStart,
                         background: Container(
                           margin: const EdgeInsets.symmetric(vertical: 6),
@@ -271,9 +332,8 @@ class _VaccinePageState extends State<VaccinePage> {
                           ),
                           child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                        onDismissed: (_) => _deleteLogWithUndo(index),
+                        onDismissed: (_) => _deleteLogWithUndoByValue(value),
                         child: _logTile(
-                          context,
                           mainColor: mainColor,
                           title: title,
                           date: date,
@@ -289,46 +349,33 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  // ---------------------------
-  // UI blocks
-  // ---------------------------
-
-  Widget _typeSelector(BuildContext context, Color mainColor) {
+  Widget _typeSelector(Color mainColor) {
     final cs = Theme.of(context).colorScheme;
 
     return _surfaceCard(
-      context,
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Row(
           children: [
             Expanded(
               child: _typeChip(
-                context,
-                label: "Aşı",
+                label: _kTypeVaccine,
                 icon: Icons.vaccines,
-                selected: _selectedType == "Aşı",
+                selected: _isVaccineMode,
                 mainColor: mainColor,
                 cs: cs,
-                onTap: () => setState(() {
-                  _selectedType = "Aşı";
-                  _selectedVaccine = null;
-                }),
+                onTap: () => _switchType(_kTypeVaccine),
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _typeChip(
-                context,
-                label: "İlaç/Vitamin",
+                label: _kTypeMed,
                 icon: Icons.medication,
-                selected: _selectedType == "İlaç/Vitamin",
+                selected: !_isVaccineMode,
                 mainColor: mainColor,
                 cs: cs,
-                onTap: () => setState(() {
-                  _selectedType = "İlaç/Vitamin";
-                  _selectedVaccine = null;
-                }),
+                onTap: () => _switchType(_kTypeMed),
               ),
             ),
           ],
@@ -337,8 +384,7 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _typeChip(
-    BuildContext context, {
+  Widget _typeChip({
     required String label,
     required IconData icon,
     required bool selected,
@@ -380,14 +426,13 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _logTile(
-    BuildContext context, {
+  Widget _logTile({
     required Color mainColor,
     required String title,
     required String date,
   }) {
     final cs = Theme.of(context).colorScheme;
-    final isVaccine = title.contains("💉");
+    final isVaccine = title.startsWith(_tagVaccine);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
@@ -414,8 +459,11 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _emptyState(BuildContext context) {
+  Widget _emptyStateForType() {
     final cs = Theme.of(context).colorScheme;
+    final msg = _isVaccineMode
+        ? 'Henüz aşı kaydı yok.'
+        : 'Henüz ilaç/vitamin kaydı yok.';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -429,17 +477,14 @@ class _VaccinePageState extends State<VaccinePage> {
           Icon(Icons.info_outline, color: cs.onSurfaceVariant),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
-              "Henüz işlem yok.",
-              style: TextStyle(color: cs.onSurfaceVariant),
-            ),
+            child: Text(msg, style: TextStyle(color: cs.onSurfaceVariant)),
           ),
         ],
       ),
     );
   }
 
-  Widget _sectionTitle(BuildContext context, String text) {
+  Widget _sectionTitle(String text) {
     final cs = Theme.of(context).colorScheme;
     return Text(
       text,
@@ -450,7 +495,7 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  static Widget _surfaceCard(BuildContext context, {required Widget child}) {
+  Widget _surfaceCard({required Widget child}) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
@@ -469,11 +514,33 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  // ---------------------------
-  // Vaccine blocks
-  // ---------------------------
+  // -----------------------------
+  // Vaccine UI (Dropdown with headers)
+  // - headers are FULL WIDTH, NO ICONS
+  // - header texts do not truncate
+  // -----------------------------
+  Widget _vaccineDropdown(Color mainColor) {
+    final cs = Theme.of(context).colorScheme;
 
-  Widget _buildVaccineDropdown(Color mainColor) {
+    final items = <DropdownMenuItem<String>>[
+      DropdownMenuItem<String>(
+        enabled: false,
+        value: '__header_mandatory__',
+        child: _dropdownHeader(text: 'Zorunlu Aşılar', cs: cs),
+      ),
+      ..._mandatoryVaccines.map(
+        (v) => DropdownMenuItem<String>(value: v, child: Text(v)),
+      ),
+      DropdownMenuItem<String>(
+        enabled: false,
+        value: '__header_optional__',
+        child: _dropdownHeader(text: 'Opsiyonel / Özel Aşılar', cs: cs),
+      ),
+      ..._optionalVaccines.map(
+        (v) => DropdownMenuItem<String>(value: v, child: Text(v)),
+      ),
+    ];
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
@@ -483,44 +550,14 @@ class _VaccinePageState extends State<VaccinePage> {
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           isExpanded: true,
-          hint: const Text("Hangi aşı yapıldı?"),
+          hint: const Text('Hangi aşı yapıldı?'),
           value: _selectedVaccine,
-          items: [
-            const DropdownMenuItem<String>(
-              value: 'HEADER_MANDATORY',
-              enabled: false,
-              child: Text(
-                'Zorunlu Aşılar',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            ..._mandatoryVaccines.map(
-              (v) => DropdownMenuItem<String>(value: v, child: Text(v)),
-            ),
-            const DropdownMenuItem<String>(
-              value: 'HEADER_OPTIONAL',
-              enabled: false,
-              child: Text(
-                'Opsiyonel / Özel Aşılar',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-            ..._optionalVaccines.map(
-              (v) => DropdownMenuItem<String>(value: v, child: Text(v)),
-            ),
-          ],
+          items: items,
           onChanged: (value) {
-            if (value == null ||
-                value == 'HEADER_MANDATORY' ||
-                value == 'HEADER_OPTIONAL') {
+            if (value == null) return;
+            if (value == '__header_mandatory__' ||
+                value == '__header_optional__')
               return;
-            }
             setState(() => _selectedVaccine = value);
           },
         ),
@@ -528,7 +565,28 @@ class _VaccinePageState extends State<VaccinePage> {
     );
   }
 
-  Widget _buildVaccineInfoCard(Color mainColor) {
+  Widget _dropdownHeader({required String text, required ColorScheme cs}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.surfaceVariant.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.visible, // do not cut
+        softWrap: false,
+        style: TextStyle(
+          fontWeight: FontWeight.w900,
+          color: cs.onSurface.withValues(alpha: 0.85),
+        ),
+      ),
+    );
+  }
+
+  Widget _vaccineInfoCard(Color mainColor) {
     if (_selectedVaccine == null) return const SizedBox.shrink();
 
     final cs = Theme.of(context).colorScheme;
@@ -540,7 +598,6 @@ class _VaccinePageState extends State<VaccinePage> {
         _vaccineInfo[_selectedVaccine] ??
         'Bu aşı hakkında detaylı takvim ve uygulama bilgisi için çocuk doktorunuza danışın.';
 
-    // Daha “sakin” ton: alert hissi yerine nötr bilgi kartı
     final bg = cs.surfaceVariant.withValues(alpha: 0.35);
     final border = mainColor.withValues(alpha: 0.35);
 
@@ -571,8 +628,8 @@ class _VaccinePageState extends State<VaccinePage> {
           ),
           const SizedBox(height: 10),
           Text(
-            "Not: Uygulama resmi aşı takvimi veya tıbbi tavsiye yerine geçmez. "
-            "Aşı zamanlamasını mutlaka çocuk doktorunuzla birlikte planlayın.",
+            'Not: Uygulama resmi aşı takvimi veya tıbbi tavsiye yerine geçmez. '
+            'Aşı zamanlamasını mutlaka çocuk doktorunuzla birlikte planlayın.',
             style: TextStyle(
               fontSize: 11,
               height: 1.25,
