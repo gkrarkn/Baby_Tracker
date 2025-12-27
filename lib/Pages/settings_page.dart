@@ -1,8 +1,9 @@
+// lib/pages/settings_page.dart
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'privacy_policy_webview_page.dart';
 
 import '../core/app_globals.dart';
+import '../core/notification_sync.dart';
 import '../theme/theme_controller.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -23,14 +24,18 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _loadGender() async {
-    final prefs = await SharedPreferences.getInstance();
-    final g = prefs.getString('gender') ?? 'none';
+    // app startup’ta loadAppGlobals() çalıştıysa babyGender hydrate olmuştur
     if (!mounted) return;
-    setState(() => _gender = g);
+    setState(() => _gender = babyGender.value);
   }
 
   Future<void> _setGender(String value) async {
     setState(() => _gender = value);
+
+    // GrowthPage’in okuduğu kaynak burası
+    await setBabyGender(value);
+
+    // ThemeController içinde de kullanıyorsan kalsın (zararsız)
     await widget.themeController.setGender(value);
   }
 
@@ -43,7 +48,11 @@ class _SettingsPageState extends State<SettingsPage> {
       locale: const Locale('tr', 'TR'),
     );
     if (picked == null) return;
+
     await setBabyBirthDate(picked);
+
+    // Tarih değişince: mevcut prefs ne ise ona göre (atak+aşı+feeding) yeniden kur.
+    await NotificationSync.syncAll();
   }
 
   Future<void> _pickDueDate() async {
@@ -55,7 +64,11 @@ class _SettingsPageState extends State<SettingsPage> {
       locale: const Locale('tr', 'TR'),
     );
     if (picked == null) return;
+
     await setBabyDueDate(picked);
+
+    // Due date değişince: düzelt. yaş etkilenir -> yeniden kur.
+    await NotificationSync.syncAll();
   }
 
   void _showDueDateInfo() {

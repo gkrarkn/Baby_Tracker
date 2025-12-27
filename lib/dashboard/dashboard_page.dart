@@ -1,4 +1,4 @@
-// lib/pages/dashboard_page.dart
+// lib/dashboard/dashboard_page.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -6,13 +6,16 @@ import '../core/analytics_service.dart';
 import '../core/app_globals.dart';
 import '../theme/theme_controller.dart';
 
-import 'settings_page.dart';
-import 'sleep_page.dart';
-import 'feeding_page.dart';
-import 'vaccine_page.dart';
+import '../pages/settings_page.dart';
+import '../pages/sleep_page.dart';
+import '../pages/feeding_page.dart';
+import '../pages/vaccine_page.dart';
 import '../growth/growth_page.dart';
-import 'lullaby_page.dart';
+import '../pages/lullaby_page.dart';
 import '../notes/notes_page.dart';
+
+import 'dashboard_summary_repo.dart';
+import 'dashboard_summary_sheet.dart';
 
 class DashboardPage extends StatefulWidget {
   final ThemeController themeController;
@@ -26,15 +29,49 @@ class _DashboardPageState extends State<DashboardPage> {
   // ---- UI constants ----
   static const double _pageHPadding = 16;
   static const double _pageVPadding = 16;
-  static const double _gridSpacing = 12;
-  static const double _cardRadius = 18;
 
+  // Grid spacing (senin isteğine göre biraz açıldı)
+  static const double _gridSpacing = 14;
+
+  static const double _cardRadius = 18;
   static const String _userName = 'Göker';
+
+  final DashboardSummaryRepo _repo = DashboardSummaryRepo();
+
+  bool _isPremium = false;
+  TodaySummary? _today;
+  WeeklyFeedingSummary? _weeklyFeeding;
 
   @override
   void initState() {
     super.initState();
     AnalyticsService.instance.appOpen();
+    _loadSummary();
+  }
+
+  Future<void> _loadSummary() async {
+    try {
+      final results = await Future.wait([
+        _repo.getPremiumFlag(), // bool
+        _repo.getTodaySummary(), // TodaySummary
+        _repo.getWeeklyFeedingSummary(), // WeeklyFeedingSummary
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _isPremium = results[0] as bool;
+        _today = results[1] as TodaySummary;
+        _weeklyFeeding = results[2] as WeeklyFeedingSummary;
+      });
+    } catch (_) {
+      // Dashboard asla çökmesin.
+      if (!mounted) return;
+      setState(() {
+        _isPremium = false;
+        _today ??= TodaySummary.empty();
+        _weeklyFeeding ??= WeeklyFeedingSummary.empty();
+      });
+    }
   }
 
   @override
@@ -85,20 +122,37 @@ class _DashboardPageState extends State<DashboardPage> {
                 children: [
                   _welcomeCard(context, mainColor),
                   const SizedBox(height: 16),
+
+                  // Grid alanı
                   Expanded(
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final double availableH = constraints.maxHeight;
-                        final double availableW = constraints.maxWidth;
+                        final availableH = constraints.maxHeight;
+                        final availableW = constraints.maxWidth;
+
+                        // Grid'e “nefes” payı (üstte çok az, altta biraz daha fazla)
+                        const double gridTopPadding = 2;
+                        const double gridBottomPadding = 22;
+
+                        final usableH =
+                            availableH - gridTopPadding - gridBottomPadding;
 
                         // 2 sütun, 3 satır
-                        final double tileW = (availableW - _gridSpacing) / 2;
-                        final double tileH =
-                            (availableH - (_gridSpacing * 2)) / 3;
+                        final tileW = (availableW - _gridSpacing) / 2;
 
-                        final double ratio = tileW / tileH;
+                        // Kartları “bir tık küçült”
+                        final tileH =
+                            ((usableH - (_gridSpacing * 2)) / 3) * 0.95;
+
+                        final ratio = tileW / tileH;
 
                         return GridView.count(
+                          padding: const EdgeInsets.fromLTRB(
+                            0,
+                            gridTopPadding,
+                            0,
+                            gridBottomPadding,
+                          ),
                           crossAxisCount: 2,
                           crossAxisSpacing: _gridSpacing,
                           mainAxisSpacing: _gridSpacing,
@@ -292,20 +346,70 @@ class _DashboardPageState extends State<DashboardPage> {
                     height: 1.15,
                   ),
                 ),
-                const SizedBox(height: 12),
-                _miniChipDisabledWithInfoInside(
-                  context,
-                  icon: Icons.insights_outlined,
-                  label: 'Özet',
-                  sheetTitle: 'Özet',
-                  sheetBody:
-                      'Özet yakında.\n\nUyku/sağlık verileri birikince otomatik özet gösterecek.',
-                ),
+                const SizedBox(height: 8),
+                _todaySummaryLine(context),
+                const SizedBox(height: 10),
+                _summaryChip(context),
               ],
             ),
           ),
           Icon(Icons.auto_awesome, color: mainColor.withValues(alpha: 0.55)),
         ],
+      ),
+    );
+  }
+
+  Widget _todaySummaryLine(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    if (_today == null) {
+      return Text(
+        'Bugün: yükleniyor…',
+        style: GoogleFonts.nunito(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w800,
+          color: cs.onSurfaceVariant,
+        ),
+      );
+    }
+
+    if (_today!.isEmpty) {
+      return InkWell(
+        onTap: () => _openSummarySheet(context),
+        child: Text(
+          'Bugün: Henüz kayıt yok',
+          style: GoogleFonts.nunito(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w900,
+            color: cs.onSurface,
+          ),
+        ),
+      );
+    }
+
+    final parts = <String>[];
+
+    if (_today!.milkMl > 0) parts.add('🍼 ${_today!.milkMl} ml');
+    if (_today!.solidCount > 0) parts.add('🍎 ${_today!.solidCount}');
+    if (_today!.sleep != Duration.zero) {
+      final h = _today!.sleep.inHours;
+      final m = _today!.sleep.inMinutes.remainder(60);
+      if (h > 0) {
+        parts.add('🌙 ${h}s ${m}d');
+      } else {
+        parts.add('🌙 ${m}d');
+      }
+    }
+
+    return InkWell(
+      onTap: () => _openSummarySheet(context),
+      child: Text(
+        'Bugün: ${parts.join(' • ')}',
+        style: GoogleFonts.nunito(
+          fontSize: 13.5,
+          fontWeight: FontWeight.w900,
+          color: cs.onSurface,
+        ),
       ),
     );
   }
@@ -318,102 +422,52 @@ class _DashboardPageState extends State<DashboardPage> {
     return 'İyi geceler';
   }
 
-  Widget _miniChipDisabledWithInfoInside(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String sheetTitle,
-    required String sheetBody,
-  }) {
+  // -------------------------
+  // Summary Chip
+  // -------------------------
+  Widget _summaryChip(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
-    return Container(
-      constraints: const BoxConstraints(minWidth: 110, maxWidth: 150),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.70),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.28)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 15,
-            color: cs.onSurfaceVariant.withValues(alpha: 0.55),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: GoogleFonts.nunito(
-              fontSize: 12.2,
-              fontWeight: FontWeight.w800,
-              color: cs.onSurfaceVariant.withValues(alpha: 0.70),
+    return InkWell(
+      onTap: () => _openSummarySheet(context),
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 110, maxWidth: 170),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: cs.surface.withValues(alpha: 0.70),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.28)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 6),
             ),
-          ),
-          const SizedBox(width: 6),
-          InkWell(
-            onTap: () =>
-                _showInfoSheet(context, title: sheetTitle, body: sheetBody),
-            borderRadius: BorderRadius.circular(999),
-            child: Padding(
-              padding: const EdgeInsets.all(2),
-              child: Icon(
-                Icons.info_outline_rounded,
-                size: 16,
-                color: cs.onSurfaceVariant.withValues(alpha: 0.75),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showInfoSheet(
-    BuildContext context, {
-    required String title,
-    required String body,
-  }) {
-    final cs = Theme.of(context).colorScheme;
-
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => Padding(
-        padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-        child: Column(
+          ],
+        ),
+        child: Row(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Icon(
+              Icons.insights_outlined,
+              size: 15,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+            ),
+            const SizedBox(width: 6),
             Text(
-              title,
+              'Özet',
               style: GoogleFonts.nunito(
-                fontSize: 18,
-                fontWeight: FontWeight.w900,
-                color: cs.onSurface,
+                fontSize: 12.2,
+                fontWeight: FontWeight.w800,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.70),
               ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              body,
-              style: GoogleFonts.nunito(
-                height: 1.25,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Anladım'),
-              ),
+            const SizedBox(width: 6),
+            Icon(
+              Icons.info_outline_rounded,
+              size: 16,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.75),
             ),
           ],
         ),
@@ -421,8 +475,51 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 
+  void _openSummarySheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => DashboardSummarySheet(
+        today: _today ?? TodaySummary.empty(),
+        weeklyFeeding: _weeklyFeeding ?? WeeklyFeedingSummary.empty(),
+        isPremium: _isPremium,
+
+        // Premium aksiyonu: detaylı trend/analiz (paywall/upgrade akışı)
+        onTapUpgrade: () {
+          Navigator.pop(context);
+          _showPremiumInfo(context);
+        },
+        onClose: () => Navigator.pop(context),
+      ),
+    );
+  }
+
+  void _showPremiumInfo(BuildContext context) {
+    // Şimdilik “soft gate”:
+    // Detaylı haftalık trend / analiz metrikleri Premium ile açılır.
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Premium'),
+        content: const Text(
+          'Detaylı trend ve gelişmiş özetler Premium ile açılacak.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Tamam'),
+          ),
+        ],
+      ),
+    );
+  }
+
   // -------------------------
-  // Menu Card
+  // Menu Card (renkli/gradient)
   // -------------------------
   Widget _menuCard(
     BuildContext context, {

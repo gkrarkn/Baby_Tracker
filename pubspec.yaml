@@ -35,6 +35,7 @@ flutter:
     - assets/recipes/recipes_tr.json
     - assets/privacy-policy-tr.html
     - assets/privacy-policy-en.html
+    - assets/who/
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,7 @@
 // lib/pages/feeding_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/page_appbar_title.dart';
 
 import 'package:baby_tracker/core/app_globals.dart';
 import 'package:baby_tracker/recipes/widgets/recipes_section.dart';
@@ -352,7 +353,10 @@ class _FeedingPageState extends State<FeedingPage> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Beslenme 🍽️'),
+        title: const PageAppBarTitle(
+          title: 'Beslenme',
+          icon: Icons.restaurant_rounded,
+        ),
         backgroundColor: mainColor,
         foregroundColor: Colors.white,
         actions: [

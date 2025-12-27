@@ -121,8 +121,8 @@ class _SparklinePainter extends CustomPainter {
       color: labelColor,
     );
 
-    final maxText = '${vMax} dk';
-    final minText = '${vMin} dk';
+    final maxText = '$vMax dk';
+    final minText = '$vMin dk';
 
     final tpMax = TextPainter(
       text: TextSpan(text: maxText, style: textStyle),

@@ -1,13 +1,15 @@
 // lib/notes/notes_page.dart
 import 'package:flutter/material.dart';
 
-import '../core/app_globals.dart';
 import '../ads/anchored_adaptive_banner.dart';
-import 'notes_controller.dart';
-import 'note_model.dart';
-import 'note_tile.dart';
+import '../core/app_globals.dart';
+import '../widgets/page_appbar_title.dart';
+
 import 'note_editor_sheet.dart';
+import 'note_model.dart';
 import 'note_reminder_picker.dart';
+import 'note_tile.dart';
+import 'notes_controller.dart';
 
 class NotesPage extends StatefulWidget {
   const NotesPage({super.key});
@@ -27,11 +29,14 @@ class _NotesPageState extends State<NotesPage> {
 
   @override
   Widget build(BuildContext context) {
-    final Color mainColor = appThemeColor.value;
+    final mainColor = appThemeColor.value;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Notlar'),
+        title: const PageAppBarTitle(
+          title: 'Notlar',
+          icon: Icons.note_alt_rounded,
+        ),
         backgroundColor: mainColor,
         foregroundColor: Colors.white,
       ),
@@ -55,7 +60,7 @@ class _NotesPageState extends State<NotesPage> {
                         padding: const EdgeInsets.fromLTRB(12, 8, 12, 16 + 96),
                         itemCount: _controller.notes.length,
                         itemBuilder: (_, index) {
-                          final Note note = _controller.notes[index];
+                          final note = _controller.notes[index];
 
                           return Dismissible(
                             key: ValueKey(note.id),

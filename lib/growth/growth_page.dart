@@ -1,10 +1,34 @@
 // lib/growth/growth_page.dart
-import 'package:flutter/material.dart';
+import 'dart:math' as math;
+
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import '../core/app_globals.dart'
+    show babyBirthDate, babyGender, formatDateTr, appThemeColor;
 
 import '../ads/anchored_adaptive_banner.dart';
+import '../core/app_globals.dart' show babyBirthDate, babyGender, formatDateTr;
+import '../widgets/page_appbar_title.dart';
 import 'growth_controller.dart';
 import 'growth_entry.dart';
+import 'who/who_models.dart' as who;
+import 'who/who_provider.dart' as who_data;
+
+enum GrowthTab { weight, length, head }
+
+extension GrowthTabX on GrowthTab {
+  String get label => switch (this) {
+    GrowthTab.weight => 'Kilo',
+    GrowthTab.length => 'Boy',
+    GrowthTab.head => 'Baş Çevresi',
+  };
+
+  who.WhoMetric get whoMetric => switch (this) {
+    GrowthTab.weight => who.WhoMetric.weight,
+    GrowthTab.length => who.WhoMetric.length,
+    GrowthTab.head => who.WhoMetric.head,
+  };
+}
 
 class GrowthPage extends StatefulWidget {
   const GrowthPage({super.key});
@@ -15,473 +39,661 @@ class GrowthPage extends StatefulWidget {
 
 class _GrowthPageState extends State<GrowthPage>
     with SingleTickerProviderStateMixin {
-  late final GrowthController _controller;
-  late final TabController _tab;
+  late final TabController _tabController;
 
-  final _weightCtrl = TextEditingController(); // gram
-  final _lengthCtrl = TextEditingController(); // cm
-  final _headCtrl = TextEditingController(); // cm
+  final GrowthController _controller = GrowthController();
+
+  final TextEditingController _weightGrCtrl = TextEditingController();
+  final TextEditingController _lengthCmCtrl = TextEditingController();
+  final TextEditingController _headCmCtrl = TextEditingController();
 
   DateTime _selectedDate = DateTime.now();
+
+  final who_data.WhoProvider _who = who_data.WhoProvider.instance;
+
+  // X ekseni: gün index (tarih label stabil)
+  static final DateTime _epochDay = DateTime(1970, 1, 1);
 
   @override
   void initState() {
     super.initState();
-    _controller = GrowthController();
-    _tab = TabController(length: 3, vsync: this);
-
-    _controller.load().then((_) {
-      if (!mounted) return;
-      setState(() {});
-    });
+    _tabController = TabController(length: 3, vsync: this);
+    _controller.load();
   }
 
   @override
   void dispose() {
-    _tab.dispose();
-    _weightCtrl.dispose();
-    _lengthCtrl.dispose();
-    _headCtrl.dispose();
+    _tabController.dispose();
+    _weightGrCtrl.dispose();
+    _lengthCmCtrl.dispose();
+    _headCmCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
+  GrowthTab get _activeTab => GrowthTab.values[_tabController.index];
+
+  // ---------------- Helpers ----------------
+
+  who.WhoGender? _whoGenderFromPrefs(String g) {
+    if (g == 'boy') return who.WhoGender.boy;
+    if (g == 'girl') return who.WhoGender.girl;
+    return null;
+  }
+
+  int? _ageDays(DateTime measurementDate) {
+    final birth = babyBirthDate.value;
+    if (birth == null) return null;
+    return measurementDate.difference(birth).inDays;
+  }
+
+  double _xFromDate(DateTime d) {
+    final day = DateTime(d.year, d.month, d.day);
+    return day.difference(_epochDay).inDays.toDouble();
+  }
+
+  DateTime _dateFromX(double x) {
+    return _epochDay.add(Duration(days: x.round()));
+  }
+
+  String _formatDateShort(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}.${d.month.toString().padLeft(2, '0')}';
+
+  double? _valueForTab(GrowthEntry e, GrowthTab tab) {
+    return switch (tab) {
+      GrowthTab.weight => _weightKgOrNull(e),
+      GrowthTab.length => _lengthCmOrNull(e),
+      GrowthTab.head => _headCmOrNull(e),
+    };
+  }
+
+  double? _weightKgOrNull(GrowthEntry e) {
+    final wg = e.weightGr;
+    if (wg == null || wg <= 0) return null;
+    return wg / 1000.0;
+  }
+
+  double? _lengthCmOrNull(GrowthEntry e) {
+    final lc = e.lengthCm;
+    if (lc == null || lc <= 0) return null;
+    return lc;
+  }
+
+  double? _headCmOrNull(GrowthEntry e) {
+    final hc = e.headCm;
+    if (hc == null || hc <= 0) return null;
+    return hc;
+  }
+
+  List<FlSpot> _whoSpotsP(
+    who.WhoSeries series,
+    double Function(who.WhoPoint p) pick,
+  ) {
+    final birth = babyBirthDate.value!;
+    return series.points.map((p) {
+      final d = birth.add(Duration(days: p.ageDays));
+      return FlSpot(_xFromDate(d), pick(p));
+    }).toList();
+  }
+
+  Future<void> _pickMeasurementDate() async {
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 1),
+      firstDate: DateTime(2015),
+      lastDate: DateTime.now(),
+      locale: const Locale('tr', 'TR'),
     );
     if (picked == null) return;
     setState(() => _selectedDate = picked);
   }
 
-  int? _parseInt(String s) {
-    final cleaned = s.trim();
-    if (cleaned.isEmpty) return null;
-    return int.tryParse(cleaned);
-  }
+  Future<void> _saveMeasurement() async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
 
-  double? _parseDouble(String s) {
-    final cleaned = s.trim().replaceAll(',', '.');
-    if (cleaned.isEmpty) return null;
-    return double.tryParse(cleaned);
-  }
+    final weightGr = int.tryParse(_weightGrCtrl.text.trim());
+    final lengthCm = double.tryParse(_lengthCmCtrl.text.trim());
+    final headCm = double.tryParse(_headCmCtrl.text.trim());
 
-  static DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+    final entry = GrowthEntry(
+      id: id,
+      date: _selectedDate,
+      weightGr: (weightGr == null || weightGr <= 0) ? null : weightGr,
+      lengthCm: (lengthCm == null || lengthCm <= 0) ? null : lengthCm,
+      headCm: (headCm == null || headCm <= 0) ? null : headCm,
+    );
 
-  static String _prettyDate(DateTime d) {
-    const months = [
-      'Oca',
-      'Şub',
-      'Mar',
-      'Nis',
-      'May',
-      'Haz',
-      'Tem',
-      'Ağu',
-      'Eyl',
-      'Eki',
-      'Kas',
-      'Ara',
-    ];
-    return '${d.day} ${months[d.month - 1]} ${d.year}';
-  }
-
-  Future<void> _save() async {
-    final weightGr = _parseInt(_weightCtrl.text);
-    final lengthCm = _parseDouble(_lengthCtrl.text);
-    final headCm = _parseDouble(_headCtrl.text);
-
-    if (weightGr == null && lengthCm == null && headCm == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('En az bir ölçüm girin.')));
+    if (entry.weightGr == null &&
+        entry.lengthCm == null &&
+        entry.headCm == null) {
       return;
     }
 
-    final entry = GrowthEntry(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      date: _dateOnly(_selectedDate),
-      weightGr: weightGr,
-      lengthCm: lengthCm,
-      headCm: headCm,
-    );
-
     await _controller.add(entry);
 
-    _weightCtrl.clear();
-    _lengthCtrl.clear();
-    _headCtrl.clear();
+    _weightGrCtrl.clear();
+    _lengthCmCtrl.clear();
+    _headCmCtrl.clear();
 
     if (!mounted) return;
-    setState(() {});
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Kaydedildi.')));
+    setState(() => _selectedDate = DateTime.now());
   }
 
-  Future<void> _delete(GrowthEntry entry) async {
-    final ok = await _confirmDelete();
-    if (!ok) return;
-
-    await _controller.deleteById(entry.id);
-
-    if (!mounted) return;
-    setState(() {});
-  }
-
-  Future<bool> _confirmDelete() async {
-    final result = await showDialog<bool>(
+  void _showWhoInfoDialog() {
+    showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Silinsin mi?'),
-        content: const Text('Bu ölçüm kalıcı olarak silinecek. Emin misin?'),
+        title: const Text('WHO referans aralığı'),
+        content: const Text(
+          'Grafikteki referans bant Dünya Sağlık Örgütü (WHO) büyüme standartlarına '
+          'göre p3–p97 aralığını temsil eder.\n\n'
+          'Bu karşılaştırma; doğum tarihi ve cinsiyet seçiliyse yaklaşık bir referans sağlar. '
+          'Klinik değerlendirme için doktorunuza danışınız.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Vazgeç'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sil'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Anladım'),
           ),
         ],
       ),
     );
-    return result ?? false;
   }
+
+  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final entries = _controller.entriesSorted;
+    final mainColor = appThemeColor.value; // Theme.primary yerine bunu kullan
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Gelişim')),
-      bottomNavigationBar: const AnchoredAdaptiveBanner(),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [cs.primary.withValues(alpha: 0.10), cs.surface],
-          ),
+      appBar: AppBar(
+        title: const PageAppBarTitle(
+          title: 'Gelişim',
+          icon: Icons.show_chart_rounded,
         ),
-        child: ListView(
-          // ✅ anchored banner varken alttan ekstra boşluk
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-          children: [
-            _surfaceCard(
-              context,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TabBar(
-                    controller: _tab,
-                    isScrollable: true,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 14),
-                    labelStyle: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                    unselectedLabelStyle: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                    labelColor: cs.primary,
-                    unselectedLabelColor: cs.onSurfaceVariant,
-                    indicatorColor: cs.primary,
-                    tabs: const [
-                      Tab(text: 'Kilo'),
-                      Tab(text: 'Boy'),
-                      Tab(text: 'Baş Çevresi'),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    height: 190,
-                    child: TabBarView(
-                      controller: _tab,
-                      children: [
-                        _chart(
-                          context,
-                          entries: entries,
-                          selector: (e) => e.weightKg,
-                          unit: 'kg',
-                        ),
-                        _chart(
-                          context,
-                          entries: entries,
-                          selector: (e) => e.lengthCm,
-                          unit: 'cm',
-                        ),
-                        _chart(
-                          context,
-                          entries: entries,
-                          selector: (e) => e.headCm,
-                          unit: 'cm',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 14),
-            _surfaceCard(
-              context,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
+        backgroundColor: mainColor,
+        foregroundColor: Colors.white,
+      ),
+      body: AnimatedBuilder(
+        animation: _controller,
+        builder: (_, __) {
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+            children: [
+              _surfaceCard(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Yeni Ölçüm',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: cs.onSurface,
-                      ),
+                    TabBar(
+                      controller: _tabController,
+                      isScrollable: true,
+                      labelColor: mainColor,
+                      unselectedLabelColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.75),
+                      indicatorColor: mainColor,
+                      tabs: const [
+                        Tab(text: 'Kilo'),
+                        Tab(text: 'Boy'),
+                        Tab(text: 'Baş Çevresi'),
+                      ],
+                      onTap: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 12),
-                    _fieldRow(
-                      context,
-                      label: 'Kilo (g)',
-                      hint: 'Örn: 3250',
-                      controller: _weightCtrl,
-                      trailing: IconButton(
-                        onPressed: _pickDate,
-                        icon: const Icon(Icons.calendar_month),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    _fieldRow(
-                      context,
-                      label: 'Boy (cm)',
-                      hint: 'Örn: 52.5',
-                      controller: _lengthCtrl,
-                      trailing: const SizedBox(width: 40),
-                    ),
-                    const SizedBox(height: 12),
-                    _fieldRow(
-                      context,
-                      label: 'Baş çevresi (cm)',
-                      hint: 'Örn: 35.2',
-                      controller: _headCtrl,
-                      trailing: const SizedBox(width: 40),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      _prettyDate(_selectedDate),
-                      style: TextStyle(color: cs.onSurfaceVariant),
-                      textAlign: TextAlign.right,
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: _save,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 14),
-                        child: Text('Kaydet'),
-                      ),
-                    ),
+                    _buildChartBlock(mainColor),
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              'Geçmiş Ölçümler',
-              style: TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-                color: cs.onSurface,
-              ),
-            ),
-            const SizedBox(height: 10),
-            if (entries.isEmpty)
-              Text(
-                'Henüz kayıt yok.',
-                style: TextStyle(color: cs.onSurfaceVariant),
-              )
-            else
-              ...entries.map((e) => _historyTile(context, e)),
-          ],
-        ),
+              const SizedBox(height: 14),
+              _surfaceCard(child: _buildNewMeasurementForm(mainColor)),
+              const SizedBox(height: 14),
+              _surfaceCard(child: _buildRecordsList()),
+              const SizedBox(height: 10),
+              const AnchoredAdaptiveBanner(),
+            ],
+          );
+        },
       ),
     );
   }
 
-  Widget _fieldRow(
-    BuildContext context, {
-    required String label,
-    required String hint,
-    required TextEditingController controller,
-    required Widget trailing,
-  }) {
-    final cs = Theme.of(context).colorScheme;
+  Widget _buildChartBlock(Color mainColor) {
+    final entriesOldestFirst = _controller.entriesOldestFirst;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          label,
-          style: TextStyle(fontWeight: FontWeight.w800, color: cs.onSurface),
-        ),
-        const SizedBox(height: 8),
-        Row(
+    final measurementSpots = <FlSpot>[];
+    for (final e in entriesOldestFirst) {
+      final v = _valueForTab(e, _activeTab);
+      if (v == null) continue;
+      measurementSpots.add(FlSpot(_xFromDate(e.date), v));
+    }
+
+    final birth = babyBirthDate.value;
+    final gender = _whoGenderFromPrefs(babyGender.value);
+    final canWho = birth != null && gender != null;
+
+    final latest = entriesOldestFirst.isEmpty ? null : entriesOldestFirst.last;
+    final latestValue = latest == null
+        ? null
+        : _valueForTab(latest, _activeTab);
+    final latestAgeDays = latest == null ? null : _ageDays(latest.date);
+
+    return FutureBuilder<String?>(
+      future: (canWho && latestAgeDays != null && latestValue != null)
+          ? _who.statusText(
+              gender: gender,
+              metric: _activeTab.whoMetric,
+              ageDays: latestAgeDays,
+              value: latestValue,
+            )
+          : Future.value(null),
+      builder: (_, snapText) {
+        final status = snapText.data;
+
+        final microText = canWho
+            ? (status == null
+                  ? 'WHO’ya göre: değerlendirme yapılamadı.'
+                  : 'WHO’ya göre: $status')
+            : 'WHO karşılaştırması için doğum tarihi + cinsiyet gerekli.';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    microText,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
-                decoration: InputDecoration(
-                  hintText: hint,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
+                if (canWho)
+                  IconButton(
+                    onPressed: _showWhoInfoDialog,
+                    icon: const Icon(Icons.info_outline_rounded),
+                    tooltip: 'WHO bilgisi',
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 230,
+              child: _buildLineChart(
+                mainColor: mainColor,
+                measurementSpots: measurementSpots,
+                canWho: canWho,
+                gender: gender,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildLineChart({
+    required Color mainColor,
+    required List<FlSpot> measurementSpots,
+    required bool canWho,
+    required who.WhoGender? gender,
+  }) {
+    if (measurementSpots.isEmpty) {
+      return Center(
+        child: Text(
+          'Henüz ölçüm yok.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    double minX = measurementSpots.first.x;
+    double maxX = measurementSpots.last.x;
+
+    if (minX == maxX) {
+      minX -= 1;
+      maxX += 1;
+    }
+
+    double minY = measurementSpots.map((e) => e.y).reduce(math.min);
+    double maxY = measurementSpots.map((e) => e.y).reduce(math.max);
+
+    return FutureBuilder<who.WhoSeries?>(
+      future: (canWho && gender != null)
+          ? _who.load(gender, _activeTab.whoMetric)
+          : Future.value(null),
+      builder: (_, snapSeries) {
+        final series = snapSeries.data;
+
+        final bars = <LineChartBarData>[];
+
+        if (canWho && series != null && babyBirthDate.value != null) {
+          final p3 = _whoSpotsP(series, (p) => p.p3);
+          final p50 = _whoSpotsP(series, (p) => p.p50);
+          final p97 = _whoSpotsP(series, (p) => p.p97);
+
+          bars.addAll([
+            LineChartBarData(
+              spots: p3,
+              isCurved: true,
+              barWidth: 2,
+              dotData: const FlDotData(show: false),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.20),
+            ),
+            LineChartBarData(
+              spots: p97,
+              isCurved: true,
+              barWidth: 2,
+              dotData: const FlDotData(show: false),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.20),
+              belowBarData: BarAreaData(
+                show: true,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.08),
+              ),
+            ),
+            LineChartBarData(
+              spots: p50,
+              isCurved: true,
+              barWidth: 2,
+              dotData: const FlDotData(show: false),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.12),
+            ),
+          ]);
+
+          final allWhoY = [...p3, ...p50, ...p97].map((e) => e.y);
+          if (allWhoY.isNotEmpty) {
+            minY = math.min(minY, allWhoY.reduce(math.min));
+            maxY = math.max(maxY, allWhoY.reduce(math.max));
+          }
+        }
+
+        bars.add(
+          LineChartBarData(
+            spots: measurementSpots,
+            isCurved: true,
+            barWidth: 4,
+            dotData: const FlDotData(show: true),
+            color: mainColor.withValues(alpha: 0.75),
+            belowBarData: BarAreaData(
+              show: true,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.18),
+            ),
+          ),
+        );
+
+        final yPadding = (maxY - minY).abs() * 0.15;
+        final safeMinY = minY - (yPadding == 0 ? 1 : yPadding);
+        final safeMaxY = maxY + (yPadding == 0 ? 1 : yPadding);
+
+        final rangeDays = (maxX - minX).abs();
+        final intervalDays = math.max(1, (rangeDays / 4).round()).toDouble();
+
+        return LineChart(
+          LineChartData(
+            minX: minX,
+            maxX: maxX,
+            minY: safeMinY,
+            maxY: safeMaxY,
+            gridData: FlGridData(
+              show: true,
+              drawVerticalLine: true,
+              drawHorizontalLine: true,
+              getDrawingHorizontalLine: (_) => FlLine(
+                strokeWidth: 1,
+                dashArray: [6, 6],
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.20),
+              ),
+              getDrawingVerticalLine: (_) => FlLine(
+                strokeWidth: 1,
+                dashArray: [6, 6],
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.20),
+              ),
+            ),
+            borderData: FlBorderData(show: false),
+            lineBarsData: bars,
+            titlesData: FlTitlesData(
+              topTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              rightTitles: const AxisTitles(
+                sideTitles: SideTitles(showTitles: false),
+              ),
+              leftTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 38,
+                  getTitlesWidget: (v, meta) => Text(
+                    v.toStringAsFixed(0),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withValues(alpha: 0.70),
+                    ),
                   ),
                 ),
               ),
+              bottomTitles: AxisTitles(
+                sideTitles: SideTitles(
+                  showTitles: true,
+                  reservedSize: 34,
+                  interval: intervalDays,
+                  getTitlesWidget: (v, meta) {
+                    if ((v - v.round()).abs() > 0.0001) {
+                      return const SizedBox.shrink();
+                    }
+                    if (v < meta.min - 0.01 || v > meta.max + 0.01) {
+                      return const SizedBox.shrink();
+                    }
+
+                    final d = _dateFromX(v);
+
+                    return SideTitleWidget(
+                      axisSide: meta.axisSide,
+                      space: 8,
+                      child: Text(
+                        _formatDateShort(d),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withValues(alpha: 0.70),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
             ),
-            const SizedBox(width: 10),
-            trailing,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildNewMeasurementForm(Color mainColor) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Yeni Ölçüm',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Kilo (g)',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        _inputWithCalendar(
+          controller: _weightGrCtrl,
+          hint: 'Örn: 3250',
+          onCalendarTap: _pickMeasurementDate,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Boy (cm)',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        _textField(
+          controller: _lengthCmCtrl,
+          hint: 'Örn: 52.5',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Baş çevresi (cm)',
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 6),
+        _textField(
+          controller: _headCmCtrl,
+          hint: 'Örn: 35.0',
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Tarih: ${_formatDateShort(_selectedDate)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _saveMeasurement,
+              child: const Text('Kaydet'),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _historyTile(BuildContext context, GrowthEntry e) {
-    final cs = Theme.of(context).colorScheme;
+  Widget _buildRecordsList() {
+    final items = _controller.entriesNewestFirst;
 
-    final parts = <String>[];
-    if (e.weightKg != null) parts.add('${e.weightKg!.toStringAsFixed(2)} kg');
-    if (e.lengthCm != null)
-      parts.add('${e.lengthCm!.toStringAsFixed(1)} cm boy');
-    if (e.headCm != null) parts.add('${e.headCm!.toStringAsFixed(1)} cm baş');
+    if (items.isEmpty) {
+      return Text('Kayıt yok.', style: Theme.of(context).textTheme.bodyMedium);
+    }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: _surfaceCard(
-        context,
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: cs.primary.withValues(alpha: 0.12),
-            child: Icon(Icons.monitor_heart, color: cs.primary),
-          ),
-          title: Text(
-            parts.isEmpty ? '-' : parts.join(' • '),
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          subtitle: Text(
-            _prettyDate(e.date),
-            style: TextStyle(color: cs.onSurfaceVariant),
-          ),
-          trailing: IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _delete(e),
-          ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Kayıtlar',
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        ...items.map((e) {
+          final w = _weightKgOrNull(e);
+          final l = _lengthCmOrNull(e);
+          final h = _headCmOrNull(e);
 
-  Widget _chart(
-    BuildContext context, {
-    required List<GrowthEntry> entries,
-    required double? Function(GrowthEntry) selector,
-    required String unit,
-  }) {
-    final cs = Theme.of(context).colorScheme;
+          final parts = <String>[];
+          if (w != null) parts.add('Kilo: ${w.toStringAsFixed(2)} kg');
+          if (l != null) parts.add('Boy: ${l.toStringAsFixed(1)} cm');
+          if (h != null) parts.add('Baş: ${h.toStringAsFixed(1)} cm');
 
-    final filtered = <GrowthEntry>[];
-    for (final e in entries) {
-      final v = selector(e);
-      if (v == null) continue;
-      filtered.add(e);
-    }
-
-    filtered.sort((a, b) => a.date.compareTo(b.date));
-
-    final points = <FlSpot>[];
-    for (var i = 0; i < filtered.length; i++) {
-      points.add(FlSpot(i.toDouble(), selector(filtered[i])!));
-    }
-
-    if (points.length < 2) {
-      return Center(
-        child: Text(
-          'Grafik için en az 2 kayıt gerekli.',
-          style: TextStyle(color: cs.onSurfaceVariant),
-        ),
-      );
-    }
-
-    final minY = points.map((p) => p.y).reduce((a, b) => a < b ? a : b);
-    final maxY = points.map((p) => p.y).reduce((a, b) => a > b ? a : b);
-    final pad = (maxY - minY) == 0 ? 1.0 : (maxY - minY) * 0.15;
-
-    return LineChart(
-      LineChartData(
-        minY: minY - pad,
-        maxY: maxY + pad,
-        gridData: FlGridData(show: true),
-        borderData: FlBorderData(show: false),
-        titlesData: FlTitlesData(
-          leftTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              reservedSize: 42,
-              getTitlesWidget: (value, meta) => Text(
-                value.toStringAsFixed(1),
-                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+          return Column(
+            children: [
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  formatDateTr(e.date),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(parts.join(' • ')),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  onPressed: () async => _controller.deleteById(e.id),
+                ),
               ),
-            ),
-          ),
-          bottomTitles: AxisTitles(
-            sideTitles: SideTitles(
-              showTitles: true,
-              interval: 1,
-              getTitlesWidget: (value, meta) {
-                final idx = value.toInt();
-                if (idx < 0 || idx >= filtered.length) {
-                  return const SizedBox.shrink();
-                }
-                final d = filtered[idx].date;
-                return Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    '${d.day}.${d.month}',
-                    style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
-                  ),
-                );
-              },
-            ),
-          ),
-          topTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
-          ),
-          rightTitles: const AxisTitles(
-            sideTitles: SideTitles(showTitles: false),
+              if (e.id != items.last.id) const Divider(height: 1),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _inputWithCalendar({
+    required TextEditingController controller,
+    required String hint,
+    required VoidCallback onCalendarTap,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _textField(
+            controller: controller,
+            hint: hint,
+            keyboardType: TextInputType.number,
           ),
         ),
-        lineBarsData: [
-          LineChartBarData(
-            spots: points,
-            isCurved: true,
-            barWidth: 3,
-            dotData: FlDotData(show: true),
-            belowBarData: BarAreaData(show: true),
+        const SizedBox(width: 10),
+        InkWell(
+          onTap: onCalendarTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.20),
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.calendar_month_rounded),
           ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _textField({
+    required TextEditingController controller,
+    required String hint,
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hint,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       ),
     );
   }
 
-  static Widget _surfaceCard(BuildContext context, {required Widget child}) {
+  Widget _surfaceCard({required Widget child}) {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
@@ -496,6 +708,7 @@ class _GrowthPageState extends State<GrowthPage>
           ),
         ],
       ),
+      padding: const EdgeInsets.all(14),
       child: child,
     );
   }

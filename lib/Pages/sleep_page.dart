@@ -1,5 +1,6 @@
 // lib/pages/sleep_page.dart
 import 'package:flutter/material.dart';
+import '../widgets/page_appbar_title.dart';
 
 import 'package:baby_tracker/core/app_globals.dart';
 import 'package:baby_tracker/sleep/sleep_controller.dart';
@@ -131,11 +132,14 @@ class _SleepPageState extends State<SleepPage> {
           builder: (context, _) {
             return Scaffold(
               appBar: AppBar(
-                title: const Text(
-                  'Uyku Takibi',
-                  style: TextStyle(
-                    fontFamily: 'Nunito',
-                    fontWeight: FontWeight.w900,
+                centerTitle: true,
+                title: const SizedBox(
+                  width: double.infinity,
+                  child: Center(
+                    child: PageAppBarTitle(
+                      title: 'Uyku',
+                      icon: Icons.bedtime_rounded,
+                    ),
                   ),
                 ),
                 backgroundColor: mainColor,
@@ -148,6 +152,7 @@ class _SleepPageState extends State<SleepPage> {
                   IconButton(
                     icon: const Icon(Icons.delete_outline),
                     onPressed: _confirmClearAll,
+                    tooltip: 'Tümünü sil',
                   ),
                 ],
               ),

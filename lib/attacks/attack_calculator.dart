@@ -10,8 +10,9 @@ class AttackCalculator {
     required DateTime birthDate,
     DateTime? dueDate,
   }) {
-    if (dueDate != null && birthDate.isBefore(dueDate))
+    if (dueDate != null && birthDate.isBefore(dueDate)) {
       return _dateOnly(dueDate);
+    }
     return _dateOnly(birthDate);
   }
 

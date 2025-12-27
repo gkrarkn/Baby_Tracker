@@ -1,5 +1,4 @@
 // lib/core/app_globals.dart
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +10,12 @@ const String kAnonDataKey = 'anonDataContributionEnabled';
 
 const String kBabyBirthDateKey = 'babyBirthDateIso';
 const String kBabyDueDateKey = 'babyDueDateIso';
+
+// NEW (canonical key)
+const String kBabyGenderKey = 'babyGender'; // 'none' | 'boy' | 'girl'
+
+// LEGACY (senin mevcut SettingsPage’te kullandığın)
+const String kLegacyGenderKey = 'gender';
 
 // ---------------------------
 // App-wide Notifiers
@@ -28,6 +33,9 @@ final ValueNotifier<Color> appThemeColor = ValueNotifier<Color>(
 final ValueNotifier<DateTime?> babyBirthDate = ValueNotifier<DateTime?>(null);
 final ValueNotifier<DateTime?> babyDueDate = ValueNotifier<DateTime?>(null);
 
+// Baby gender (WHO vs)
+final ValueNotifier<String> babyGender = ValueNotifier<String>('none');
+
 // ---------------------------
 // Globals init (hydrate)
 // ---------------------------
@@ -41,6 +49,22 @@ Future<void> loadAppGlobals() async {
   // Baby dates (ISO)
   babyBirthDate.value = _readIsoDate(prefs.getString(kBabyBirthDateKey));
   babyDueDate.value = _readIsoDate(prefs.getString(kBabyDueDateKey));
+
+  // Gender (canonical)
+  String? g = prefs.getString(kBabyGenderKey);
+
+  // Migration: legacy 'gender' -> 'babyGender'
+  if (g == null) {
+    final legacy = prefs.getString(kLegacyGenderKey);
+    if (legacy != null && _isValidGender(legacy)) {
+      g = legacy;
+      await prefs.setString(kBabyGenderKey, legacy);
+      // legacy key’i silmek zorunlu değil; istersen kaldırabilirsin:
+      // await prefs.remove(kLegacyGenderKey);
+    }
+  }
+
+  babyGender.value = _isValidGender(g) ? g! : 'none';
 }
 
 // ---------------------------
@@ -73,6 +97,17 @@ Future<void> setBabyDueDate(DateTime? value) async {
   }
 }
 
+Future<void> setBabyGender(String value) async {
+  final v = _isValidGender(value) ? value : 'none';
+  babyGender.value = v;
+
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString(kBabyGenderKey, v);
+
+  // legacy ile de uyumlu tut (istersen kaldırabilirsin)
+  await prefs.setString(kLegacyGenderKey, v);
+}
+
 // ---------------------------
 // Helpers
 // ---------------------------
@@ -81,6 +116,8 @@ DateTime? _readIsoDate(String? iso) {
   if (iso == null || iso.trim().isEmpty) return null;
   return DateTime.tryParse(iso);
 }
+
+bool _isValidGender(String? g) => g == 'none' || g == 'boy' || g == 'girl';
 
 String formatDateTr(DateTime d) {
   String two(int v) => v.toString().padLeft(2, '0');

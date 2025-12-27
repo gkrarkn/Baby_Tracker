@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
+import '../widgets/page_appbar_title.dart';
 
 import '../core/app_globals.dart';
 import '../ads/anchored_adaptive_banner.dart';
@@ -152,7 +153,10 @@ class _LullabyPageState extends State<LullabyPage> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Müzik Kutusu 🎵'),
+        title: const PageAppBarTitle(
+          title: 'Müzik Kutusu',
+          icon: Icons.queue_music_rounded,
+        ),
         backgroundColor: mainColor,
         foregroundColor: Colors.white,
         actions: [

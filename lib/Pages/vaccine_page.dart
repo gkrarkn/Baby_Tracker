@@ -1,6 +1,7 @@
 // lib/pages/vaccine_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/page_appbar_title.dart';
 
 import '../core/app_globals.dart'; // appThemeColor + getCurrentDateTime()
 
@@ -227,7 +228,10 @@ class _VaccinePageState extends State<VaccinePage> {
         return Scaffold(
           backgroundColor: cs.surface,
           appBar: AppBar(
-            title: const Text('Sağlık Takibi 🏥'),
+            title: const PageAppBarTitle(
+              title: 'Sağlık Takibi',
+              icon: Icons.local_hospital_rounded,
+            ),
             backgroundColor: mainColor,
             foregroundColor: Colors.white,
             actions: [
@@ -400,7 +404,7 @@ class _VaccinePageState extends State<VaccinePage> {
         decoration: BoxDecoration(
           color: selected
               ? mainColor
-              : cs.surfaceVariant.withValues(alpha: 0.55),
+              : cs.surfaceContainerHighest.withValues(alpha: 0.55),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
             color: selected
@@ -556,8 +560,9 @@ class _VaccinePageState extends State<VaccinePage> {
           onChanged: (value) {
             if (value == null) return;
             if (value == '__header_mandatory__' ||
-                value == '__header_optional__')
+                value == '__header_optional__') {
               return;
+            }
             setState(() => _selectedVaccine = value);
           },
         ),
@@ -570,7 +575,7 @@ class _VaccinePageState extends State<VaccinePage> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: cs.surfaceVariant.withValues(alpha: 0.55),
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
@@ -598,7 +603,7 @@ class _VaccinePageState extends State<VaccinePage> {
         _vaccineInfo[_selectedVaccine] ??
         'Bu aşı hakkında detaylı takvim ve uygulama bilgisi için çocuk doktorunuza danışın.';
 
-    final bg = cs.surfaceVariant.withValues(alpha: 0.35);
+    final bg = cs.surfaceContainerHighest.withValues(alpha: 0.35);
     final border = mainColor.withValues(alpha: 0.35);
 
     return Container(

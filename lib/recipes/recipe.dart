@@ -24,7 +24,7 @@ class Recipe {
   });
 
   factory Recipe.fromJson(Map<String, dynamic> json) {
-    List<String> _list(String key) =>
+    List<String> list(String key) =>
         (json[key] as List? ?? const []).map((e) => e.toString()).toList();
 
     return Recipe(
@@ -32,10 +32,10 @@ class Recipe {
       title: json['title'].toString(),
       ageMinMonths: (json['ageMinMonths'] as num?)?.toInt() ?? 6,
       prepTimeMin: (json['prepTimeMin'] as num?)?.toInt() ?? 10,
-      tags: _list('tags'),
-      allergens: _list('allergens'),
-      ingredients: _list('ingredients'),
-      steps: _list('steps'),
+      tags: list('tags'),
+      allergens: list('allergens'),
+      ingredients: list('ingredients'),
+      steps: list('steps'),
       nutritionNote: json['nutritionNote']?.toString(),
       imageAsset: json['imageAsset']?.toString(),
     );
