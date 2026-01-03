@@ -49,6 +49,8 @@ The app is developed with **Flutter**, offering full **iOS support**, while **An
 - WHO reference bands (p3–p97)  
 - Smart curve smoothing as measurements are recorded  
 
+> **Note:** WHO-based growth evaluations are provided for informational purposes only and do not constitute medical advice, diagnosis, or treatment.
+
 ### 📝 Notes
 - Free-text notes  
 - Date-based organization  
