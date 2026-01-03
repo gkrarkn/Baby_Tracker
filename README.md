@@ -1,157 +1,138 @@
 # Baby Tracker 👶  
 A Complete Infant Development & Daily Routine App
 
-Baby Tracker is a Flutter-based mobile application that helps parents monitor and organize their baby’s daily activities such as sleep, feeding, growth milestones, medications, and soothing sounds — all within a clean, fast, and intuitive interface.
+[🇹🇷 Turkish Version](./README.tr.md)
+
+Baby Tracker is a Flutter-based mobile application designed to help parents easily track and manage their baby’s daily routines and development.  
+Sleep, feeding, growth, health records, soothing sounds, and notes are brought together in a clean, fast, and intuitive interface.
+
+The app is developed with **Flutter**, offering full **iOS support**, while **Android support is currently in progress**.
 
 ---
 
-## ✨ Features
+## ✨ Key Features
 
 ### 😴 Sleep Tracking
-- Start/stop sleep sessions  
+- Start / stop sleep sessions  
 - Automatic duration calculation  
-- Daily & weekly sleep history  
-- Visual, scrollable logs  
+- Daily and weekly sleep summaries  
+- Scrollable sleep history  
+- Sleep window reminders (age-based, optional)
 
 ### 🍼 Feeding Tracker
-- Formula or breast milk intake  
-- Adjustable amount selector  
-- History of recent feedings  
+- Breast milk, formula, and solid food tracking  
+- Quick-entry feeding cards  
+- Feeding frequency overview  
 
-### 🎵 Soothing Sounds (Lullabies)
+### 🎧 Soothing Sounds (Loop Supported)
 - White noise  
-- Rain sounds  
-- Vacuum  
+- Rain sound  
+- Vacuum sound  
+- Fireplace sound  
 - Brahms lullaby  
+- Continuous loop playback  
+- Optional sleep timer with fade-out  
 
-### 🩺 Health Tracking (Vaccines & Medications)
-- Record vaccine name & date  
-- Track upcoming doses  
-- Quick medication notes  
+### 🌙 Night Mode
+- Screen dimming for night use  
+- Audio playback continues while the screen is locked  
+- Contextual hints for parents  
 
-### 📏 Growth Tracking (Weight / Height / Head Circumference)
-- Enter and view growth metrics  
-- Auto-generated graphs (fL_chart)
-- Animated, interactive charts
+### 💉 Health Tracking (Vaccines & Medications)
+- Vaccine and medication records  
+- Custom reminders  
+- Notification support  
+
+### 📈 Growth Tracking (WHO-based)
+- Weight, length, and head circumference records  
+- Interactive charts powered by **fl_chart**  
+- WHO reference bands (p3–p97)  
+- Smart curve smoothing as measurements are recorded  
+
+### 📝 Notes
+- Free-text notes  
+- Date-based organization  
+
+---
 
 ## 📸 Screenshots
 
-### 🏠 Home Screen
+### 🏠 Home
+<img src="assets/screenshots/home.png" width="320"/>
 
-<div align="left">
-  <img src="assets/screenshots/home.png" width="320"/>
-</div>
+### 😴 Sleep Tracking
+<img src="assets/screenshots/sleep.png" width="320"/>
 
-### 🛌 Sleep Tracking
-
-<div align="left">
-  <img src="assets/screenshots/sleep.png" width="320"/>
-</div>
-
-### 🍼 Feeding Tracker
-
-<div align="left">
-  <img src="assets/screenshots/feeding.png" width="320"/>
-</div>
+### 🍼 Feeding
+<img src="assets/screenshots/feeding.png" width="320"/>
 
 ### 🎧 Lullabies
+<img src="assets/screenshots/lullabies.png" width="320"/>
 
-<div align="left">
-  <img src="assets/screenshots/lullabies.png" width="320"/>
-</div>
+### 💉 Health
+<img src="assets/screenshots/health.png" width="320"/>
 
-### 💉 Health Tracking
+### 📈 Growth
+<img src="assets/screenshots/growth.png" width="320"/>
 
-<div align="left">
-  <img src="assets/screenshots/health.png" width="320"/>
-</div>
+---
 
-### 📈 Growth Tracking
+## 🛣️ Roadmap (2026)
 
-<div align="left">
-  <img src="assets/screenshots/growth.png" width="320"/>
-</div>
+### Q1
+- Advanced sleep & feeding analytics  
+- Dark mode polish  
+- Monthly growth reports (PDF)
 
-🚀 Roadmap (2026)
-Q1
+### Q2–Q3
+- Android Play Store release  
+- Optional cloud sync  
+- Multiple baby profiles  
 
-Advanced analytics (sleep cycles, feeding trends)
+### Q4+
+- Optional premium features (ad-free experience + insights)
+- AI-powered routine suggestions  
 
-UI/UX polishing and dark mode
+---
 
-Q2
+## 🚀 Getting Started (Development)
 
-Cloud sync (optional)
+### Requirements
+- Flutter SDK **3.x**  
+- Dart SDK (bundled with Flutter)  
+- Xcode + iOS Simulator (for iOS)  
+- Android Studio + Android SDK (for Android)
 
-Multi-device support
-
-Import/export baby data
-
-Q3
-
-Android release
-
-Localization (ES, DE, FR)
-
-Q4
-
-Premium tier (ad-free + insights)
-
-🧑‍💻 Getting Started (Development)
-### 1. Requirements
-
-Flutter SDK 3.10.x or higher
-
-Dart SDK (included with Flutter)
-
-Xcode + iOS Simulator
-
-Android Studio + Android SDK (optional for Android builds)
-
-### 2. Verify Flutter
-flutter --version
+### Installation
+```bash
+git clone https://github.com/gkrarkrn/Baby_Tracker.git
+cd Baby_Tracker
 flutter pub get
-flutter run -d ios
-flutter run -d android
+flutter run
 
 🧱 Tech Stack
-
 Flutter 3.x
-
 Dart
-
-State Management: setState (lightweight approach)
-
+State management: lightweight (setState, ChangeNotifier)
 Charts: fl_chart
-
-Local Storage: SharedPreferences
-
-Custom Widgets
+Local storage: shared_preferences
+Audio: audioplayers
 
 🤝 Contributing
+Contributions are welcome.
+If you plan a major change, please open an issue first to discuss your proposal.
 
-Contributions, bug fixes, and feature ideas are welcome.
-Please submit a pull request or open an issue.
 
-## 📄 Privacy Policy
-
+📄 Privacy Policy
 Baby Tracker prioritizes user privacy.
-
-The application does not collect personal data
-
-All records are stored locally on the user’s device
-
-No data is shared with third parties
-
-Advertisements are anonymous and do not identify users
+No personal data is collected
+All data is stored locally on the device
+No personal data is shared with third parties.
+Advertisements, if present, are anonymous and not linked to personal identity.
 
 👉 [Read the Privacy Policy (EN)](privacy/privacy-policy-en.md)
 
+---------------------------------------------------------------------------------------------
+
 📄 License
-
-This project is licensed under the MIT License.
-
-## 🇹🇷 Turkish README  
-The Turkish version of this documentation is available here:
-
-[🇹🇷 Turkish README](README.tr.md)
+MIT License © 2026 Göker Arkun
