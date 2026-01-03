@@ -129,9 +129,10 @@ flutter run
 
 🧩 Platform Desteği
 
-Platform	Durum
 iOS	✅    Tam destek
+
 Android	🚧 Geliştiriliyor
+
 Desktop	❌ Planlanmıyor
 
 🤝 Katkı
