@@ -1,9 +1,8 @@
-// lib/pages/lullaby_page.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
-import '../widgets/page_appbar_title.dart';
 
+import '../widgets/page_appbar_title.dart';
 import '../core/app_globals.dart';
 import '../ads/anchored_adaptive_banner.dart';
 
@@ -21,41 +20,65 @@ class _LullabyPageState extends State<LullabyPage> {
   bool _isPlaying = false;
 
   bool _sleepMode = false;
+  double _volume = 0.8;
+
   Timer? _sleepTimer;
+  Timer? _fadeTimer;
   Duration? _remaining;
 
   final List<_LullabyTrack> _tracks = const [
     _LullabyTrack(
       title: 'Beyaz Gürültü',
-      assetFile: 'white_noise.ogg',
+      fileBase: 'white_noise',
       icon: Icons.graphic_eq_rounded,
       bgColor: Color(0xFFE3F2FD),
       iconColor: Color(0xFF1E88E5),
     ),
     _LullabyTrack(
       title: 'Yağmur Sesi',
-      assetFile: 'rain.ogg',
+      fileBase: 'rain',
       icon: Icons.water_drop_rounded,
       bgColor: Color(0xFFE1F5FE),
       iconColor: Color(0xFF039BE5),
     ),
     _LullabyTrack(
+      title: 'Dalga Sesi',
+      fileBase: 'waves',
+      icon: Icons.waves_rounded,
+      bgColor: Color(0xFFE0F7FA),
+      iconColor: Color(0xFF00838F),
+    ),
+    _LullabyTrack(
+      title: 'Rüzgar Sesi',
+      fileBase: 'brown_noise',
+      icon: Icons.air_rounded,
+      bgColor: Color(0xFFE8F5E9),
+      iconColor: Color(0xFF43A047),
+    ),
+    _LullabyTrack(
+      title: 'Anne Kalp Atışı',
+      fileBase: 'heartbeat_mother',
+      icon: Icons.favorite_rounded,
+      bgColor: Color(0xFFFCE4EC),
+      iconColor: Color(0xFFD81B60),
+    ),
+    _LullabyTrack(
       title: 'Klasik Ninni',
-      assetFile: 'brahms_lullaby.ogg',
+      fileBase: 'brahms_lullaby',
       icon: Icons.music_note_rounded,
       bgColor: Color(0xFFEDE7F6),
       iconColor: Color(0xFF7E57C2),
     ),
     _LullabyTrack(
       title: 'Süpürge Sesi',
-      assetFile: 'vacuum.ogg',
+      fileBase: 'vacuum',
       icon: Icons.cleaning_services_rounded,
       bgColor: Color(0xFFE0F2F1),
       iconColor: Color(0xFF26A69A),
     ),
     _LullabyTrack(
       title: 'Şömine Sesi',
-      assetFile: 'fireplace.ogg',
+      fileBase: 'fireplace',
       icon: Icons.local_fire_department_rounded,
       bgColor: Color(0xFFFFE0B2),
       iconColor: Color(0xFFEF6C00),
@@ -66,20 +89,22 @@ class _LullabyPageState extends State<LullabyPage> {
   void initState() {
     super.initState();
     _player.setReleaseMode(ReleaseMode.loop);
+    _player.setVolume(_volume);
   }
 
   @override
   void dispose() {
     _sleepTimer?.cancel();
-    _player.stop();
+    _fadeTimer?.cancel();
     _player.dispose();
     super.dispose();
   }
 
   Future<void> _togglePlay(_LullabyTrack track) async {
-    final sameTrack = _currentFile == track.assetFile;
+    final file = '${track.fileBase}.m4a';
+    final same = _currentFile == file;
 
-    if (sameTrack && _isPlaying) {
+    if (same && _isPlaying) {
       await _player.pause();
       if (!mounted) return;
       setState(() => _isPlaying = false);
@@ -87,11 +112,12 @@ class _LullabyPageState extends State<LullabyPage> {
     }
 
     await _player.stop();
-    await _player.play(AssetSource('audio/${track.assetFile}'));
+    await _player.setVolume(_volume);
+    await _player.play(AssetSource('audio/$file'));
 
     if (!mounted) return;
     setState(() {
-      _currentFile = track.assetFile;
+      _currentFile = file;
       _isPlaying = true;
     });
   }
@@ -105,53 +131,125 @@ class _LullabyPageState extends State<LullabyPage> {
     });
   }
 
-  String get _timerLabel {
-    final r = _remaining;
-    if (r == null) return 'Kapalı';
-    final mm = r.inMinutes;
-    final ss = r.inSeconds % 60;
-    if (mm > 0) return '${mm}dk';
-    return '${ss}s';
-  }
+  // ---------------------------------------------------------------------------
+  // TIMER
+  // ---------------------------------------------------------------------------
 
-  void _startSleepTimerMinutes(int minutes) {
+  void _startSleepTimer(int minutes) {
     _sleepTimer?.cancel();
+    _fadeTimer?.cancel();
 
-    if (minutes == 0) {
+    if (minutes <= 0) {
       setState(() => _remaining = null);
       return;
     }
 
     setState(() => _remaining = Duration(minutes: minutes));
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Zamanlayıcı başladı · Müzik devam eder, ekranı kilitleyebilirsiniz 🌙',
+        ),
+        duration: Duration(seconds: 3),
+      ),
+    );
+
     _sleepTimer = Timer.periodic(const Duration(seconds: 1), (t) async {
-      if (!mounted) return;
+      if (!mounted || _remaining == null) return;
 
-      final r = _remaining;
-      if (r == null) {
-        t.cancel();
-        return;
+      final next = _remaining! - const Duration(seconds: 1);
+      setState(() => _remaining = next);
+
+      if (next.inSeconds == 10) {
+        _startFadeOut();
       }
-
-      final next = r - const Duration(seconds: 1);
 
       if (next.inSeconds <= 0) {
         t.cancel();
         setState(() => _remaining = null);
         await _stopPlayback();
-        return;
       }
-
-      setState(() => _remaining = next);
     });
   }
+
+  void _startFadeOut() {
+    _fadeTimer?.cancel();
+
+    const steps = 10;
+    final stepVolume = _volume / steps;
+    var current = _volume;
+
+    _fadeTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      current -= stepVolume;
+      if (current <= 0) {
+        _player.setVolume(0);
+        t.cancel();
+      } else {
+        _player.setVolume(current);
+      }
+    });
+  }
+
+  String get _timerLabel {
+    if (_remaining == null) return 'Kapalı';
+    final m = _remaining!.inMinutes;
+    return '${m}dk';
+  }
+
+  // ---------------------------------------------------------------------------
+  // CUSTOM TIMER DIALOG
+  // ---------------------------------------------------------------------------
+
+  Future<void> _openCustomTimerDialog() async {
+    final controller = TextEditingController();
+
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Süre seç'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              labelText: 'Dakika',
+              hintText: 'Örn: 30',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Vazgeç'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text);
+                if (value == null || value < 1 || value > 180) return;
+                Navigator.pop(ctx, value);
+              },
+              child: const Text('Başlat'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      _startSleepTimer(result);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // UI
+  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
     final mainColor = appThemeColor.value;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
         title: const PageAppBarTitle(
           title: 'Müzik Kutusu',
@@ -161,31 +259,50 @@ class _LullabyPageState extends State<LullabyPage> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            tooltip: _sleepMode ? 'Uyku modu açık' : 'Uyku modu kapalı',
+            tooltip: 'Gece modu',
             icon: Icon(
               _sleepMode ? Icons.dark_mode_rounded : Icons.dark_mode_outlined,
             ),
-            onPressed: () => setState(() => _sleepMode = !_sleepMode),
+            onPressed: () {
+              setState(() => _sleepMode = !_sleepMode);
+              if (_sleepMode) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      'Gece modu açık · Müzik devam eder, ekranı kilitleyebilirsiniz 🌙',
+                    ),
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
           ),
           PopupMenuButton<int>(
-            tooltip: 'Otomatik kapanma',
-            onSelected: _startSleepTimerMinutes,
+            onSelected: (v) {
+              if (v == -1) {
+                _openCustomTimerDialog();
+              } else {
+                _startSleepTimer(v);
+              }
+            },
             itemBuilder: (_) => const [
-              PopupMenuItem(value: 15, child: Text('15 dk')),
-              PopupMenuItem(value: 30, child: Text('30 dk')),
+              PopupMenuItem(value: 20, child: Text('20 dk')),
+              PopupMenuItem(value: 40, child: Text('40 dk')),
               PopupMenuItem(value: 60, child: Text('60 dk')),
+              PopupMenuDivider(),
+              PopupMenuItem(value: -1, child: Text('Özel süre…')),
               PopupMenuDivider(),
               PopupMenuItem(value: 0, child: Text('Timer kapat')),
             ],
             child: Padding(
-              padding: const EdgeInsets.only(left: 6, right: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   const Icon(Icons.timer_outlined, size: 20),
                   const SizedBox(width: 6),
                   Text(
                     _timerLabel,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -196,87 +313,63 @@ class _LullabyPageState extends State<LullabyPage> {
       bottomNavigationBar: const AnchoredAdaptiveBanner(),
       body: Stack(
         children: [
-          ListView.separated(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 96),
-            itemCount: _tracks.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final track = _tracks[index];
-              final isActive = _currentFile == track.assetFile && _isPlaying;
-
-              final activeBg = Color.alphaBlend(
-                mainColor.withValues(alpha: 0.10),
-                Theme.of(context).cardColor,
-              );
-              final cardBg = isActive ? activeBg : Theme.of(context).cardColor;
-              final borderColor = isActive
-                  ? mainColor.withValues(alpha: 0.28)
-                  : Colors.black12;
-
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                curve: Curves.easeOut,
-                decoration: BoxDecoration(
-                  color: cardBg,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: borderColor),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: isActive ? 10 : 6,
-                      offset: const Offset(0, 2),
-                      color: Colors.black.withValues(
-                        alpha: isActive ? 0.10 : 0.08,
-                      ),
-                    ),
-                  ],
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(16),
-                    onTap: () => _togglePlay(track),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 10,
-                      ),
-                      child: Row(
-                        children: [
-                          _IconBubble(
-                            icon: track.icon,
-                            bgColor: track.bgColor,
-                            iconColor: track.iconColor,
-                            isActive: isActive,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              track.title,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(
-                            isActive ? Icons.pause_circle : Icons.play_circle,
-                            size: 38,
-                            color: isActive ? mainColor : Colors.grey,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
+          ListView(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+            children: [
+              _buildVolumeSlider(),
+              const SizedBox(height: 12),
+              ..._tracks.map(_buildTrackTile),
+            ],
           ),
           if (_sleepMode)
             IgnorePointer(
-              child: Container(color: Colors.black.withValues(alpha: 0.55)),
+              child: Container(color: Colors.black.withOpacity(0.55)),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVolumeSlider() {
+    return Row(
+      children: [
+        const Icon(Icons.volume_down),
+        Expanded(
+          child: Slider(
+            value: _volume,
+            min: 0,
+            max: 1,
+            onChanged: (v) {
+              setState(() => _volume = v);
+              _player.setVolume(v);
+            },
+          ),
+        ),
+        const Icon(Icons.volume_up),
+      ],
+    );
+  }
+
+  Widget _buildTrackTile(_LullabyTrack track) {
+    final active =
+        _currentFile?.startsWith(track.fileBase) == true && _isPlaying;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: track.bgColor,
+          child: Icon(track.icon, color: track.iconColor),
+        ),
+        title: Text(
+          track.title,
+          style: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+        trailing: Icon(
+          active ? Icons.pause_circle : Icons.play_circle,
+          size: 36,
+        ),
+        onTap: () => _togglePlay(track),
       ),
     );
   }
@@ -284,90 +377,16 @@ class _LullabyPageState extends State<LullabyPage> {
 
 class _LullabyTrack {
   final String title;
-  final String assetFile;
+  final String fileBase;
   final IconData icon;
   final Color bgColor;
   final Color iconColor;
 
   const _LullabyTrack({
     required this.title,
-    required this.assetFile,
+    required this.fileBase,
     required this.icon,
     required this.bgColor,
     required this.iconColor,
   });
-}
-
-class _IconBubble extends StatefulWidget {
-  final IconData icon;
-  final Color bgColor;
-  final Color iconColor;
-  final bool isActive;
-
-  const _IconBubble({
-    required this.icon,
-    required this.bgColor,
-    required this.iconColor,
-    required this.isActive,
-  });
-
-  @override
-  State<_IconBubble> createState() => _IconBubbleState();
-}
-
-class _IconBubbleState extends State<_IconBubble>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _c = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-
-    _scale = Tween<double>(
-      begin: 1.0,
-      end: 1.08,
-    ).animate(CurvedAnimation(parent: _c, curve: Curves.easeInOut));
-
-    if (widget.isActive) _c.repeat(reverse: true);
-  }
-
-  @override
-  void didUpdateWidget(covariant _IconBubble oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isActive != widget.isActive) {
-      if (widget.isActive) {
-        _c.repeat(reverse: true);
-      } else {
-        _c.stop();
-        _c.value = 0;
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final child = Container(
-      width: 42,
-      height: 42,
-      decoration: BoxDecoration(
-        color: widget.bgColor,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Icon(widget.icon, color: widget.iconColor, size: 22),
-    );
-
-    if (!widget.isActive) return child;
-    return ScaleTransition(scale: _scale, child: child);
-  }
 }

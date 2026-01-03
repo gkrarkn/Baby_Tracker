@@ -356,4 +356,34 @@ class NotificationService {
     await init();
     await _plugin.cancelAll();
   }
+  // ---------------------------------------------------------------------------
+  // SLEEP WINDOW REMINDER (ADD ONLY)
+  // ---------------------------------------------------------------------------
+
+  static const int _sleepWindowId = 50_000;
+
+  /// Uyku penceresi için tek seferlik hatırlatma
+  Future<void> scheduleSleepWindowReminder({
+    required DateTime when,
+    required String title,
+    required String body,
+  }) async {
+    await init();
+
+    // tek aktif kuralı
+    await _plugin.cancel(_sleepWindowId);
+
+    await _scheduleOneTime(
+      id: _sleepWindowId,
+      title: title,
+      body: body,
+      when: when,
+      payload: 'sleep_window',
+    );
+  }
+
+  Future<void> cancelSleepWindowReminder() async {
+    await init();
+    await _plugin.cancel(_sleepWindowId);
+  }
 }

@@ -414,10 +414,12 @@ class _GrowthPageState extends State<GrowthPage>
           }
         }
 
+        final bool smoothLine = measurementSpots.length >= 4;
+
         bars.add(
           LineChartBarData(
             spots: measurementSpots,
-            isCurved: true,
+            isCurved: smoothLine,
             barWidth: 4,
             dotData: const FlDotData(show: true),
             color: mainColor.withValues(alpha: 0.75),
