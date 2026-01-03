@@ -5,12 +5,10 @@
 
 **Bebek Takip**, ebeveynlerin bebeklerinin günlük rutinlerini **kolay, hızlı ve güvenli** şekilde takip edebilmesi için geliştirilmiş modern bir mobil uygulamadır.
 
-Uyku, beslenme, sağlık, gelişim ölçümleri, müzik kutusu (ninniler & beyaz gürültü) ve notlar tek bir akışta toplanır.  
+Uyku, beslenme, sağlık, gelişim ölçümleri, müzik kutusu ve notlar tek bir akışta toplanır.  
 Tüm veriler **yalnızca cihaz üzerinde** saklanır.
 
-Uygulama **Flutter** ile geliştirilmiştir ve **iOS için tam desteklidir**. Android sürümü Play Store yayını için hazırlık aşamasındadır.
-
----
+Uygulama **Flutter** ile geliştirilmiştir. Baby Tracker ilk olarak **Android** platformunda yayınlanacaktır. **iOS** sürümü, ürünün olgunlaşmasını takiben yayınlanacaktır.
 
 ## 📱 Öne Çıkan Özellikler
 
