@@ -128,22 +128,27 @@ flutter run
 ```
 
 🧩 Platform Desteği
+
 Platform	Durum
-iOS	✅ Tam destek
+iOS	✅    Tam destek
 Android	🚧 Geliştiriliyor
 Desktop	❌ Planlanmıyor
 
 🤝 Katkı
+
 Katkılar memnuniyetle kabul edilir.
 Büyük değişiklikler için önce bir issue açılması önerilir.
 
+
 📄 Gizlilik Politikası
-Bebek Takip kullanıcı gizliliğini öncelik olarak kabul eder.
-Kişisel veri toplanmaz veya üçüncü taraflarla paylaşılmaz.
-Tüm kullanıcı verileri varsayılan olarak yalnızca cihaz üzerinde saklanır.
-Anonim ve toplulaştırılmış kullanım verileri, kullanıcı kimliğiyle ilişkilendirilmeksizin uygulama performansını ve deneyimi iyileştirmek amacıyla kullanılabilir.
-Reklamlar anonimdir ve kullanıcı kimliğiyle ilişkilendirilmez.
-Bu uygulamanın gizlilik yaklaşımı, uygulama içi Gizlilik Politikası ile birebir uyumludur.
+
+- Bebek Takip kullanıcı gizliliğini öncelik olarak kabul eder.
+- Kişisel veri toplanmaz veya üçüncü taraflarla paylaşılmaz.
+- Tüm kullanıcı verileri varsayılan olarak yalnızca cihaz üzerinde saklanır.
+- Anonim ve toplulaştırılmış kullanım verileri, kullanıcı kimliğiyle ilişkilendirilmeksizin uygulama performansını ve deneyimi iyileştirmek amacıyla kullanılabilir.
+- Reklamlar anonimdir ve kullanıcı kimliğiyle ilişkilendirilmez.
+- Bu uygulamanın gizlilik yaklaşımı, uygulama içi Gizlilik Politikası ile birebir uyumludur.
+
 
 👉 [Gizlilik Politikasını Oku (TR)](privacy/privacy-policy-tr.md)
 
