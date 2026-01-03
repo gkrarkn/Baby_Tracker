@@ -125,6 +125,8 @@ cd Baby_Tracker
 flutter pub get
 flutter run
 
+```
+
 🧩 Platform Desteği
 Platform	Durum
 iOS	✅ Tam destek
