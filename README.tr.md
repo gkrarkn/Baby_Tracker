@@ -135,10 +135,12 @@ Android	🚧 Geliştiriliyor
 
 Desktop	❌ Planlanmıyor
 
+
 🤝 Katkı
 
 Katkılar memnuniyetle kabul edilir.
 Büyük değişiklikler için önce bir issue açılması önerilir.
+
 
 
 📄 Gizlilik Politikası
@@ -152,6 +154,7 @@ Büyük değişiklikler için önce bir issue açılması önerilir.
 
 
 👉 [Gizlilik Politikasını Oku (TR)](privacy/privacy-policy-tr.md)
+
 
 📄 Lisans
 MIT License © 2026 Göker Arkun
