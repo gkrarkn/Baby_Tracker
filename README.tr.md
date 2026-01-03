@@ -57,6 +57,8 @@ Uygulama **Flutter** ile geliştirilmiştir ve **iOS için tam desteklidir**. An
 - **Dünya Sağlık Örgütü (WHO)** referans bantları (p3–p97)  
 - “Alt sınır / Üst sınır” bağlamsal değerlendirme  
 
+NOT: WHO değerlendirmeleri bilgilendirme amaçlıdır, tıbbi teşhis niteliği taşımaz.
+
 ---
 
 ### 📝 Notlar
@@ -66,9 +68,6 @@ Uygulama **Flutter** ile geliştirilmiştir ve **iOS için tam desteklidir**. An
 ---
 
 ## 📸 Ekran Görüntüleri
-
-> ⚠️ Görseller güncel UI’yi yansıtmalıdır.  
-> Yeni gece modu, müzik kutusu ve WHO grafiklerini içeren ekranlar önerilir.
 
 ### 🏠 Ana Sayfa
 <img src="assets/screenshots/home.png" width="320"/>
@@ -132,7 +131,6 @@ flutter run
 Platform	Durum
 iOS	✅ Tam destek
 Android	🚧 Geliştiriliyor
-Web	⚠️ Kısmi
 Desktop	❌ Planlanmıyor
 
 🤝 Katkı
