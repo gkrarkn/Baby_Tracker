@@ -6,7 +6,7 @@ A Complete Infant Development & Daily Routine App
 Baby Tracker is a Flutter-based mobile application designed to help parents easily track and manage their baby’s daily routines and development.  
 Sleep, feeding, growth, health records, soothing sounds, and notes are brought together in a clean, fast, and intuitive interface.
 
-The app is developed with **Flutter**, offering full **iOS support**, while **Android support is currently in progress**.
+The application is developed using **Flutter**. Baby Tracker will be released first on the **Android platform**. The **iOS** version will follow once the product reaches sufficient maturity.
 
 ---
 
