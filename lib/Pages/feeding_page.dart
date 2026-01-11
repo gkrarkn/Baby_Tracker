@@ -28,6 +28,10 @@ class _FeedingPageState extends State<FeedingPage> {
 
   bool _isPremium = false;
 
+  // ✅ V11 – undo için tek kaynak state
+  String? _lastDeletedLog;
+  int? _lastDeletedIndex;
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +42,8 @@ class _FeedingPageState extends State<FeedingPage> {
 
   @override
   void dispose() {
+    // ✅ snackbar takılmasını önler (uyku kartı ile aynı)
+    ScaffoldMessenger.of(context).clearSnackBars();
     _foodAmountController.dispose();
     _foodNoteController.dispose();
     super.dispose();
@@ -346,7 +352,6 @@ class _FeedingPageState extends State<FeedingPage> {
   Widget build(BuildContext context) {
     final mainColor = appThemeColor.value;
 
-    // TODO: later bind to real baby profile
     final babyBirthDate = DateTime(2024, 11, 18);
     final babyMonths = _babyMonthsFromBirth(babyBirthDate);
 
@@ -377,7 +382,6 @@ class _FeedingPageState extends State<FeedingPage> {
                 16,
                 16,
                 16,
-                // ✅ anchored banner için ekstra alt boşluk
                 96 + MediaQuery.of(context).viewInsets.bottom,
               ),
               child: ConstrainedBox(
@@ -544,20 +548,23 @@ class _FeedingPageState extends State<FeedingPage> {
           ),
           onDismissed: (_) {
             final removed = _feedingLogs[index];
-            setState(() => _feedingLogs.removeAt(index));
+
+            setState(() {
+              _lastDeletedLog = removed;
+              _lastDeletedIndex = index;
+              _feedingLogs.removeAt(index);
+            });
+
             _saveLogs();
 
             ScaffoldMessenger.of(context).clearSnackBars();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Beslenme silindi'),
+                duration: const Duration(seconds: 3),
                 action: SnackBarAction(
                   label: 'Geri al',
-                  onPressed: () {
-                    final insertIndex = index.clamp(0, _feedingLogs.length);
-                    setState(() => _feedingLogs.insert(insertIndex, removed));
-                    _saveLogs();
-                  },
+                  onPressed: _undoDelete,
                 ),
               ),
             );
@@ -571,6 +578,21 @@ class _FeedingPageState extends State<FeedingPage> {
         );
       },
     );
+  }
+
+  // ✅ V11 – tek yönlü undo
+  void _undoDelete() {
+    if (_lastDeletedLog == null || _lastDeletedIndex == null) return;
+
+    final insertIndex = _lastDeletedIndex!.clamp(0, _feedingLogs.length);
+
+    setState(() {
+      _feedingLogs.insert(insertIndex, _lastDeletedLog!);
+      _lastDeletedLog = null;
+      _lastDeletedIndex = null;
+    });
+
+    _saveLogs();
   }
 }
 
