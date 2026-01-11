@@ -1,5 +1,6 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'core/app_globals.dart';
 import 'core/notification_service.dart';
@@ -8,6 +9,9 @@ import 'theme/theme_controller.dart';
 
 import 'dashboard/dashboard_page.dart';
 import 'pages/settings_page.dart';
+
+// ⭐ V11 – Favorites
+import 'recipes/recipe_favorites_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,7 +29,16 @@ Future<void> main() async {
   // Sync all notification triggers based on current prefs + saved baby dates
   await NotificationSync.syncAll();
 
-  runApp(BabyTrackerApp(themeController: themeController));
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) {
+        final service = RecipeFavoritesService();
+        service.load(); // ⭐ favoriler app açılışında yüklenir
+        return service;
+      },
+      child: BabyTrackerApp(themeController: themeController),
+    ),
+  );
 }
 
 class BabyTrackerApp extends StatefulWidget {

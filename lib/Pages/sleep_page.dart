@@ -1,18 +1,17 @@
-// lib/pages/sleep_page.dart
 import 'package:flutter/material.dart';
 
 import 'package:baby_tracker/core/app_globals.dart';
 import 'package:baby_tracker/core/analytics_service.dart';
-import 'package:baby_tracker/sleep/widgets/sleep_today_summary_card.dart';
 
 import 'package:baby_tracker/sleep/sleep_controller.dart';
-import 'package:baby_tracker/sleep/sleep_entry.dart';
 import 'package:baby_tracker/sleep/sleep_formatters.dart';
 
+import 'package:baby_tracker/sleep/widgets/sleep_today_summary_card.dart';
 import 'package:baby_tracker/sleep/widgets/sleep_timer_card.dart';
 import 'package:baby_tracker/sleep/widgets/sleep_window_premium_card.dart';
 
 import '../widgets/page_appbar_title.dart';
+import '../widgets/history_card.dart';
 
 class SleepPage extends StatefulWidget {
   const SleepPage({super.key});
@@ -22,17 +21,13 @@ class SleepPage extends StatefulWidget {
 }
 
 class _SleepPageState extends State<SleepPage> {
-  static const double _radius = 18;
   late final SleepController _controller;
-
-  bool _isPremium = false; // 👈 şimdilik manuel (Recipes ile aynı)
+  bool _isPremium = false;
 
   @override
   void initState() {
     super.initState();
-    _controller = SleepController(
-      ageInMonths: () => 14, // şimdilik sabit, birazdan bağlarız
-    )..load();
+    _controller = SleepController(ageInMonths: () => 14)..load();
 
     AnalyticsService.instance.log('screen_view', params: {'screen': 'sleep'});
   }
@@ -82,23 +77,19 @@ class _SleepPageState extends State<SleepPage> {
                           ),
                           const SizedBox(height: 14),
 
-                          // Sleep Timer
                           SleepTimerCard(
                             controller: _controller,
                             mainColor: mainColor,
                             onToggleSleep: _controller.toggleSleep,
                           ),
 
-                          // Sleep Window (Premium)
                           const SizedBox(height: 12),
                           SleepWindowPremiumCard(
                             isPremium: _isPremium,
                             enabled: _controller.sleepWindowReminderEnabled,
                             windowRangeText:
                                 _controller.recommendedSleepRangeText,
-                            onToggle: (v) {
-                              _controller.setSleepWindowReminderEnabled(v);
-                            },
+                            onToggle: _controller.setSleepWindowReminderEnabled,
                             onUpgradeTap: _showPremiumSheet,
                           ),
 
@@ -113,13 +104,48 @@ class _SleepPageState extends State<SleepPage> {
                             ),
                           ),
                           const SizedBox(height: 10),
+
                           if (_controller.entries.isEmpty)
                             Text(
                               'Henüz kayıt yok.',
                               style: TextStyle(color: cs.onSurfaceVariant),
                             )
                           else
-                            ..._controller.entries.map(_historyTile),
+                            ..._controller.entries.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final e = entry.value;
+
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
+                                child: Dismissible(
+                                  key: ValueKey(e.id),
+                                  direction: DismissDirection.endToStart,
+                                  background: Container(
+                                    alignment: Alignment.centerRight,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      borderRadius: BorderRadius.circular(18),
+                                    ),
+                                    child: const Icon(
+                                      Icons.delete,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  onDismissed: (_) {
+                                    _controller.removeEntryAt(index);
+                                  },
+                                  child: HistoryCard(
+                                    title:
+                                        'Uyku: ${SleepFormatters.durationHM(e.duration)}',
+                                    subtitle:
+                                        '${SleepFormatters.dateTime(e.start)} → ${SleepFormatters.time(e.end)}',
+                                  ),
+                                ),
+                              );
+                            }),
                         ],
                       ),
               ),
@@ -131,7 +157,7 @@ class _SleepPageState extends State<SleepPage> {
   }
 
   // --------------------------------------------------
-  // PREMIUM BOTTOM SHEET (Recipes ile AYNI)
+  // PREMIUM SHEET
   // --------------------------------------------------
 
   void _showPremiumSheet() {
@@ -171,39 +197,6 @@ class _SleepPageState extends State<SleepPage> {
           ),
         );
       },
-    );
-  }
-
-  // --------------------------------------------------
-  // Helpers
-  // --------------------------------------------------
-
-  Widget _historyTile(SleepEntry e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: _surfaceCard(
-        child: ListTile(
-          title: Text(
-            'Uyku: ${SleepFormatters.durationHM(e.duration)}',
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          subtitle: Text(
-            '${SleepFormatters.dateTime(e.start)} → ${SleepFormatters.time(e.end)}',
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _surfaceCard({required Widget child}) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(_radius),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: child,
     );
   }
 }
