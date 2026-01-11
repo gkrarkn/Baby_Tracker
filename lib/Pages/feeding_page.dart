@@ -1,11 +1,11 @@
-// lib/pages/feeding_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../widgets/page_appbar_title.dart';
+import '../widgets/history_card.dart';
+import '../ads/anchored_adaptive_banner.dart';
 
 import 'package:baby_tracker/core/app_globals.dart';
-import 'package:baby_tracker/recipes/widgets/recipes_section.dart';
-import '../ads/anchored_adaptive_banner.dart';
 
 class FeedingPage extends StatefulWidget {
   const FeedingPage({super.key});
@@ -16,7 +16,6 @@ class FeedingPage extends StatefulWidget {
 
 class _FeedingPageState extends State<FeedingPage> {
   FeedingType _selectedType = FeedingType.formula;
-
   double _mlValue = 90;
 
   SolidUnit _foodUnit = SolidUnit.gr;
@@ -25,12 +24,6 @@ class _FeedingPageState extends State<FeedingPage> {
 
   final List<String> _feedingLogs = [];
   static const String _prefsKey = 'feedingLogs';
-
-  bool _isPremium = false;
-
-  // ✅ V11 – undo için tek kaynak state
-  String? _lastDeletedLog;
-  int? _lastDeletedIndex;
 
   @override
   void initState() {
@@ -42,8 +35,6 @@ class _FeedingPageState extends State<FeedingPage> {
 
   @override
   void dispose() {
-    // ✅ snackbar takılmasını önler (uyku kartı ile aynı)
-    ScaffoldMessenger.of(context).clearSnackBars();
     _foodAmountController.dispose();
     _foodNoteController.dispose();
     super.dispose();
@@ -51,7 +42,7 @@ class _FeedingPageState extends State<FeedingPage> {
 
   Future<void> _loadLogs() async {
     final prefs = await SharedPreferences.getInstance();
-    final logs = prefs.getStringList(_prefsKey) ?? const <String>[];
+    final logs = prefs.getStringList(_prefsKey) ?? <String>[];
     if (!mounted) return;
     setState(() {
       _feedingLogs
@@ -95,12 +86,10 @@ class _FeedingPageState extends State<FeedingPage> {
         final note = _foodNoteController.text.trim();
         final noteText = note.isEmpty ? '' : ' ($note)';
 
-        final entry =
-            "🥣 Ek Gıda - $amount ${_foodUnit.label}$noteText|$timestamp";
-
         _foodAmountController.clear();
         _foodNoteController.clear();
-        return entry;
+
+        return "🥣 Ek Gıda - $amount ${_foodUnit.label}$noteText|$timestamp";
     }
   }
 
@@ -139,11 +128,7 @@ class _FeedingPageState extends State<FeedingPage> {
   }
 
   Widget _buildTodaySummaryCard(Color accent) {
-    final totalMl = _todayTotalMl();
-    final solidCount = _todaySolidCount();
-
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: accent.withValues(alpha: 0.10),
@@ -172,15 +157,8 @@ class _FeedingPageState extends State<FeedingPage> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Toplam: $totalMl ml  •  Ek gıda: $solidCount',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.85),
-                    fontWeight: FontWeight.w600,
-                  ),
+                  'Toplam: ${_todayTotalMl()} ml  •  Ek gıda: ${_todaySolidCount()}',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -190,173 +168,11 @@ class _FeedingPageState extends State<FeedingPage> {
     );
   }
 
-  int _babyMonthsFromBirth(DateTime birthDate) {
-    final now = DateTime.now();
-    int months =
-        (now.year - birthDate.year) * 12 + (now.month - birthDate.month);
-    if (now.day < birthDate.day) months -= 1;
-    return months < 0 ? 0 : months;
-  }
-
-  void _openRecipesSheet({required int babyMonths, required Color accent}) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.restaurant_menu, color: accent),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Tarifler • $babyMonths. ay',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Kapat'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: RecipesSection(
-                      babyMonths: babyMonths,
-                      isPremium: _isPremium,
-                      onUpgradeTap: _showPremiumSheet,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildRecipesCtaCard({
-    required int babyMonths,
-    required Color accent,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () => _openRecipesSheet(babyMonths: babyMonths, accent: accent),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: accent.withValues(alpha: 0.28),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.auto_awesome, color: accent),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Bebeğiniz İçin Pratik Tarifler',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '$babyMonths. ay • Ek gıdaya uygun 16 tarif',
-                    style: TextStyle(
-                      color: Colors.black.withValues(alpha: 0.65),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 27,
-              color: Colors.blueGrey.shade600,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showPremiumSheet() {
-    showModalBottomSheet(
-      context: context,
-      showDragHandle: true,
-      builder: (_) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Premium',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                '• Tüm tarifler\n'
-                '• Yaşa göre akıllı öneriler\n'
-                '• Yeni içerikler',
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() => _isPremium = true);
-                  Navigator.pop(context);
-                },
-                child: const Text('Premium’u Aç (Debug)'),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() => _isPremium = false);
-                  Navigator.pop(context);
-                },
-                child: const Text('Premium’u Kapat (Debug)'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final mainColor = appThemeColor.value;
 
-    final babyBirthDate = DateTime(2024, 11, 18);
-    final babyMonths = _babyMonthsFromBirth(babyBirthDate);
-
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const PageAppBarTitle(
           title: 'Beslenme',
@@ -368,75 +184,86 @@ class _FeedingPageState extends State<FeedingPage> {
           IconButton(
             onPressed: _clearAll,
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Tümünü sil',
           ),
         ],
       ),
       bottomNavigationBar: const AnchoredAdaptiveBanner(),
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(
-                16,
-                16,
-                16,
-                96 + MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildTypeSelector(),
-                    const SizedBox(height: 12),
-                    _buildTodaySummaryCard(Colors.orange),
-                    const SizedBox(height: 16),
-                    if (_selectedType == FeedingType.solid) ...[
-                      _buildRecipesCtaCard(
-                        babyMonths: babyMonths,
-                        accent: mainColor,
-                      ),
-                      const SizedBox(height: 12),
-                      _buildSolidFoodInputs(),
-                    ] else ...[
-                      _buildMlSelector(),
-                    ],
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton.icon(
-                        onPressed: _saveFeeding,
-                        icon: const Icon(Icons.save),
-                        label: const Text(
-                          'KAYDET',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'Geçmiş Beslenmeler',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildLogList(),
-                    const SizedBox(height: 8),
-                  ],
-                ),
-              ),
-            );
-          },
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildTypeSelector(),
+            const SizedBox(height: 12),
+            _buildTodaySummaryCard(Colors.orange),
+            const SizedBox(height: 16),
+
+            _selectedType == FeedingType.solid
+                ? _buildSolidFoodInputs()
+                : _buildMlSelector(),
+
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _saveFeeding,
+              icon: const Icon(Icons.save),
+              label: const Text('KAYDET'),
+            ),
+            const SizedBox(height: 24),
+
+            Text(
+              'Geçmiş Beslenmeler',
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 10),
+
+            _buildLogList(),
+          ],
         ),
       ),
+    );
+  }
+
+  Widget _buildLogList() {
+    if (_feedingLogs.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 12),
+        child: Text('Henüz kayıt yok.', textAlign: TextAlign.center),
+      );
+    }
+
+    return Column(
+      children: _feedingLogs.asMap().entries.map((entry) {
+        final index = entry.key;
+        final raw = entry.value;
+        final parts = raw.split('|');
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Dismissible(
+            key: ValueKey(raw),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: const Icon(Icons.delete, color: Colors.white),
+            ),
+            onDismissed: (_) {
+              setState(() => _feedingLogs.removeAt(index));
+              _saveLogs();
+            },
+            child: HistoryCard(
+              title: parts[0],
+              subtitle: parts.length > 1 ? parts[1] : '',
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -444,10 +271,9 @@ class _FeedingPageState extends State<FeedingPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: FeedingType.values.map((t) {
-        final selected = _selectedType == t;
         return ChoiceChip(
           label: Text(t.label),
-          selected: selected,
+          selected: _selectedType == t,
           onSelected: (_) => setState(() => _selectedType = t),
         );
       }).toList(),
@@ -466,7 +292,6 @@ class _FeedingPageState extends State<FeedingPage> {
           min: 0,
           max: 300,
           divisions: 30,
-          label: _mlValue.round().toString(),
           onChanged: (v) => setState(() => _mlValue = v),
         ),
       ],
@@ -481,14 +306,7 @@ class _FeedingPageState extends State<FeedingPage> {
             Expanded(
               child: TextField(
                 controller: _foodAmountController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                textInputAction: TextInputAction.next,
-                decoration: const InputDecoration(
-                  labelText: 'Miktar',
-                  border: OutlineInputBorder(),
-                ),
+                decoration: const InputDecoration(labelText: 'Miktar'),
               ),
             ),
             const SizedBox(width: 12),
@@ -497,102 +315,17 @@ class _FeedingPageState extends State<FeedingPage> {
               items: SolidUnit.values
                   .map((u) => DropdownMenuItem(value: u, child: Text(u.label)))
                   .toList(),
-              onChanged: (v) {
-                if (v == null) return;
-                setState(() => _foodUnit = v);
-              },
+              onChanged: (v) => setState(() => _foodUnit = v!),
             ),
           ],
         ),
         const SizedBox(height: 10),
         TextField(
           controller: _foodNoteController,
-          keyboardType: TextInputType.text,
-          textInputAction: TextInputAction.done,
-          decoration: const InputDecoration(
-            labelText: 'Not (opsiyonel)',
-            hintText: 'örn: yoğurt + muz',
-            border: OutlineInputBorder(),
-          ),
+          decoration: const InputDecoration(labelText: 'Not (opsiyonel)'),
         ),
       ],
     );
-  }
-
-  Widget _buildLogList() {
-    if (_feedingLogs.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: Text('Henüz kayıt yok.', style: TextStyle(color: Colors.grey)),
-        ),
-      );
-    }
-
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _feedingLogs.length,
-      itemBuilder: (context, index) {
-        final log = _feedingLogs[index];
-        final parts = log.split('|');
-
-        return Dismissible(
-          key: ValueKey(log),
-          direction: DismissDirection.endToStart,
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            color: Colors.red,
-            child: const Icon(Icons.delete, color: Colors.white),
-          ),
-          onDismissed: (_) {
-            final removed = _feedingLogs[index];
-
-            setState(() {
-              _lastDeletedLog = removed;
-              _lastDeletedIndex = index;
-              _feedingLogs.removeAt(index);
-            });
-
-            _saveLogs();
-
-            ScaffoldMessenger.of(context).clearSnackBars();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Beslenme silindi'),
-                duration: const Duration(seconds: 3),
-                action: SnackBarAction(
-                  label: 'Geri al',
-                  onPressed: _undoDelete,
-                ),
-              ),
-            );
-          },
-          child: Card(
-            child: ListTile(
-              title: Text(parts[0]),
-              subtitle: parts.length > 1 ? Text(parts[1]) : null,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // ✅ V11 – tek yönlü undo
-  void _undoDelete() {
-    if (_lastDeletedLog == null || _lastDeletedIndex == null) return;
-
-    final insertIndex = _lastDeletedIndex!.clamp(0, _feedingLogs.length);
-
-    setState(() {
-      _feedingLogs.insert(insertIndex, _lastDeletedLog!);
-      _lastDeletedLog = null;
-      _lastDeletedIndex = null;
-    });
-
-    _saveLogs();
   }
 }
 

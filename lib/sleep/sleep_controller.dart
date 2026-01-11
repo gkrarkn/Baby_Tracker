@@ -81,9 +81,7 @@ class SleepController extends ChangeNotifier {
   // --------------------------------------------------
 
   Future<void> toggleSleep() async {
-    // ----------------------------
-    // START (awake → sleeping)
-    // ----------------------------
+    // START
     if (_currentStart == null) {
       _currentStart = DateTime.now();
       notifyListeners();
@@ -97,14 +95,11 @@ class SleepController extends ChangeNotifier {
       return;
     }
 
-    // ----------------------------
-    // STOP (sleeping → awake)
-    // ----------------------------
+    // STOP
     final now = DateTime.now();
     final start = _currentStart!;
 
     if (now.isBefore(start)) {
-      // fail-safe (clock skew)
       _currentStart = null;
       notifyListeners();
       await _repo.saveCurrentStart(null);
@@ -152,9 +147,7 @@ class SleepController extends ChangeNotifier {
     await _repo.saveEntries(_entries);
     await _repo.saveCurrentStart(null);
 
-    // ----------------------------
-    // WAKE EVENT → Sleep Window
-    // ----------------------------
+    // Wake event → sleep window
     _lastWakeTime = now;
 
     final ageInMonths = _ageInMonths();
@@ -167,8 +160,16 @@ class SleepController extends ChangeNotifier {
   }
 
   // --------------------------------------------------
-  // Deletion / Reset
+  // ✅ DELETE (Swipe için TEK DOĞRU YER)
   // --------------------------------------------------
+
+  Future<void> removeEntryAt(int index) async {
+    if (index < 0 || index >= _entries.length) return;
+
+    _entries.removeAt(index);
+    notifyListeners();
+    await _repo.saveEntries(_entries);
+  }
 
   Future<void> deleteEntryById(String id) async {
     _entries.removeWhere((e) => e.id == id);
@@ -240,10 +241,9 @@ class SleepController extends ChangeNotifier {
   }
 
   // --------------------------------------------------
-  // Sleep Window – Micro UI helpers
+  // Sleep Window – UI helpers
   // --------------------------------------------------
 
-  /// Örn: "19:10 – 19:40"
   String? get recommendedSleepRangeText {
     if (_lastWakeTime == null) return null;
 
@@ -264,7 +264,6 @@ class SleepController extends ChangeNotifier {
     return '${fmt(start)} – ${fmt(end)}';
   }
 
-  /// Örn: "19:25"
   String? get formattedSleepTarget {
     if (_lastWakeTime == null) return null;
 

@@ -13,13 +13,13 @@ class WhoPoint {
   });
 
   factory WhoPoint.fromMap(Map<String, dynamic> m) {
-    double _d(dynamic v) => (v as num).toDouble();
+    double d(dynamic v) => (v as num).toDouble();
 
     return WhoPoint(
       ageDays: (m['ageDays'] as num).toInt(),
-      p3: _d(m['p3']),
-      p50: _d(m['p50']),
-      p97: _d(m['p97']),
+      p3: d(m['p3']),
+      p50: d(m['p50']),
+      p97: d(m['p97']),
     );
   }
 }

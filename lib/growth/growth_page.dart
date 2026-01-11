@@ -7,7 +7,6 @@ import '../core/app_globals.dart'
     show babyBirthDate, babyGender, formatDateTr, appThemeColor;
 
 import '../ads/anchored_adaptive_banner.dart';
-import '../core/app_globals.dart' show babyBirthDate, babyGender, formatDateTr;
 import '../widgets/page_appbar_title.dart';
 import 'growth_controller.dart';
 import 'growth_entry.dart';
